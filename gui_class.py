@@ -3,13 +3,12 @@ from tkinter import scrolledtext, messagebox
 
 
 class Gui1:
-    def __init__(self, login_func, send_msg_func, recv_msgs_func):
+    def __init__(self, login_func, send_msg_func):
         self.root = tk.Tk()
         self.root.title("Welcome")
         self.root.geometry("350x550")
         self.login_func = login_func
         self.send_msg_func = send_msg_func
-        self.recv_msgs_func = recv_msgs_func
 
     def signin_and_signup_buttons(self):
         # Create a frame for the message

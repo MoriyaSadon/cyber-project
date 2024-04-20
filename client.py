@@ -48,8 +48,10 @@ gui_obj = Gui1(log_in, send_message)
 gui_obj.signin_and_signup_buttons()
 gui_obj.root.mainloop()
 
+
+print("fhilfd")
 # Start a thread to receive messages
-receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
+receive_thread = threading.Thread(target=receive_messages)
 receive_thread.start()
 
 # # Main loop to send messages to the server
