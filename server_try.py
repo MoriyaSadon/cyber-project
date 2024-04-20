@@ -84,8 +84,10 @@ def log_in(username, password):
         if is_in:
             current_client.client_socket.send("log in succeed".encode())
             current_client.name = username
+            return True
     else:
         current_client.client_socket.send("wrong username".encode())
+    return False
 
 
 def approve_message_content(my_client: Client, message):
@@ -179,18 +181,20 @@ def approve_censored_word(word):
 
 # Function to handle incoming messages from a client
 def handle_client(current_client: Client):
-    comm = current_client.client_socket.recv(1024).decode()
-    data = current_client.client_socket.recv(1024).decode().split(" ")
-    username = data[0]
-    password = data[1]
-    if comm.lower() == "sign up":
-        sign_up(current_client)
-        if current_client.admin:
-            current_client.client_socket.send(admin_help_msg.encode())
+    check = False
+    while not check:
+        comm = current_client.client_socket.recv(1024).decode()
+        data = current_client.client_socket.recv(1024).decode().split(" ")
+        username = data[0]
+        password = data[1]
+        if comm.lower() == "sign up":
+            # check = sign_up(current_client)
+            if current_client.admin:
+                current_client.client_socket.send(admin_help_msg.encode())
+            else:
+                current_client.client_socket.send(help_msg.encode())
         else:
-            current_client.client_socket.send(help_msg.encode())
-    else:
-        log_in(username, password)
+            check = log_in(username, password)
 
     while True:
         try:

@@ -34,8 +34,11 @@ def log_in(username, password):
         messagebox.showinfo(title="message", message=message)
         if message == "log in succeed":
             gui_obj.chat_window(username)
+            # Start a thread to receive messages
+            receive_thread = threading.Thread(target=receive_messages)
+            receive_thread.start()
         else:
-            gui_obj.on_login_button_click()
+            gui_obj.open_sign_in_window("Sign in")
     else:
         messagebox.showinfo(title="try again", message="the username and the password can't contain a space")
 
@@ -46,13 +49,9 @@ client_socket.connect((HOST, PORT))
 
 gui_obj = Gui1(log_in, send_message)
 gui_obj.signin_and_signup_buttons()
+
 gui_obj.root.mainloop()
 
-
-print("fhilfd")
-# Start a thread to receive messages
-receive_thread = threading.Thread(target=receive_messages)
-receive_thread.start()
 
 # # Main loop to send messages to the server
 # while True:

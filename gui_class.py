@@ -59,6 +59,8 @@ class Gui1:
     def on_login_button_click(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
+        self.username_entry.delete(0, tk.END)  # Clear the password entry field
+        self.password_entry.delete(0, tk.END)  # Clear the password entry field
         self.login_func(username, password)
 
     def on_signup_button_click(self):
