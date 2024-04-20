@@ -3,11 +3,12 @@ from tkinter import scrolledtext, messagebox
 
 
 class Gui1:
-    def __init__(self, login_func, send_msg_func):
+    def __init__(self, login_func, signup_func, send_msg_func):
         self.root = tk.Tk()
         self.root.title("Welcome")
         self.root.geometry("350x550")
         self.login_func = login_func
+        self.signup_func = signup_func
         self.send_msg_func = send_msg_func
 
     def signin_and_signup_buttons(self):
@@ -24,14 +25,14 @@ class Gui1:
         button_frame.pack(pady=50)
 
         # Create the first button and place it in the button frame
-        button1 = tk.Button(button_frame, text="Sign up", command=lambda: self.open_sign_in_window("Sign up"), width=15, height=3, font=("Arial", 12))
+        button1 = tk.Button(button_frame, text="Sign up", command=lambda: self.open_signin_signup_window("Sign up"), width=15, height=3, font=("Arial", 12))
         button1.grid(row=0, column=0, padx=10)
 
         # Create the second button and place it in the button frame
-        button2 = tk.Button(button_frame, text="Sign in", command=lambda: self.open_sign_in_window("Sign in"), width=15, height=3, font=("Arial", 12))
+        button2 = tk.Button(button_frame, text="Sign in", command=lambda: self.open_signin_signup_window("Sign in"), width=15, height=3, font=("Arial", 12))
         button2.grid(row=0, column=1, padx=10)
 
-    def open_sign_in_window(self, comm):
+    def open_signin_signup_window(self, comm):
         # Clear window
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -53,20 +54,22 @@ class Gui1:
             login_button = tk.Button(self.root, text="Sign in", command=self.on_login_button_click)
             login_button.pack(pady=10)
         else:
-            login_button = tk.Button(self.root, text="Sign up", command=self.on_signup_button_click)
-            login_button.pack(pady=10)
+            signup_button = tk.Button(self.root, text="Sign up", command=self.on_signup_button_click)
+            signup_button.pack(pady=10)
 
     def on_login_button_click(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
-        self.username_entry.delete(0, tk.END)  # Clear the password entry field
+        self.username_entry.delete(0, tk.END)  # Clear the username entry field
         self.password_entry.delete(0, tk.END)  # Clear the password entry field
         self.login_func(username, password)
 
     def on_signup_button_click(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
-        self.login_func(username, password)
+        self.username_entry.delete(0, tk.END)  # Clear the username entry field
+        self.password_entry.delete(0, tk.END)  # Clear the password entry field
+        self.signup_func(username, password)
 
     def chat_window(self, username):
         # Clear window
@@ -82,15 +85,14 @@ class Gui1:
         self.message_entry.grid(row=1, column=0, padx=10, pady=5)
 
         # Send button
-        self.send_button = tk.Button(self.root, text="Send", width=10, command=lambda: self.send_message(username))
+        self.send_button = tk.Button(self.root, text="Send", width=10, command=self.send_message)
         self.send_button.grid(row=1, column=1, padx=10, pady=5)
 
         self.chat_display.config(state=tk.DISABLED)  # Disable editing of chat display
 
-    def send_message(self, username):
+    def send_message(self):
         message = self.message_entry.get()
         if message:
-            # message = f"{username}: {message}"
             self.display_message(message)
             self.message_entry.delete(0, tk.END)
             self.send_msg_func(message)

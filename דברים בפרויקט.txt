@@ -29,3 +29,12 @@ pass: 1234
 
 username: shira
 pass: 9876
+
+username: shani9
+pass:100
+
+username: hadar16
+pass: 246
+
+
+databaseurl = https://final-project-38405-default-rtdb.europe-west1.firebasedatabase.app

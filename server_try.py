@@ -39,32 +39,23 @@ users_firebase = Firebase("Users")
 censored_firebase = Firebase("Censored")
 
 
-def check_username(my_client: Client, username):
-    while True:
-        hashed_username = sha256(username.encode()).hexdigest()
-        if hashed_username in users_firebase.get_childs_lst():
-            my_client.client_socket.send("this username is already used, please enter a different one".encode())
-            username = my_client.client_socket.recv(1024).decode()
-        else:
-            # my_client.name = username
-            return hashed_username
+def sign_up(username, password):
+    hashed_username = sha256(username.encode()).hexdigest()
+    print(users_firebase.get_childs_lst())
+    if hashed_username not in users_firebase.get_childs_lst():
+        hashed_pass = sha256(password.encode()).hexdigest()
 
+        user = Firebase(f"Users/{hashed_username}")
+        user.update_value("name", hashed_username)
+        user.update_value("password", hashed_pass)
 
-def sign_up(my_client: Client):
-    my_client.client_socket.send("enter username: ".encode())
-    username = my_client.client_socket.recv(1024).decode()
-    hashed_username = check_username(my_client, username)
-
-    my_client.client_socket.send("enter password: ".encode())
-    password = my_client.client_socket.recv(1024).decode()
-    hashed_pass = sha256(password.encode()).hexdigest()
-
-    user = Firebase(f"Users/{hashed_username}")
-    user.update_value("name", hashed_username)
-    user.update_value("password", hashed_pass)
-
-    my_client.client_socket.send("sign up succeed".encode())
-    my_client.name = username
+        print("yes")
+        current_client.client_socket.send("Sign up succeed".encode())
+        current_client.name = username
+        return True
+    else:
+        current_client.client_socket.send("This username is already used, please enter a different one".encode())
+    return False
 
 
 def check_password(username, password):
@@ -188,7 +179,7 @@ def handle_client(current_client: Client):
         username = data[0]
         password = data[1]
         if comm.lower() == "sign up":
-            # check = sign_up(current_client)
+            check = sign_up(username, password)
             if current_client.admin:
                 current_client.client_socket.send(admin_help_msg.encode())
             else:
