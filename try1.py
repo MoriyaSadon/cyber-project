@@ -1,372 +1,147 @@
-# server
-# from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+# Server
 import socket
 import threading
+import struct
+import pickle
+import cv2
+import sounddevice as sd
+import numpy as np
+
+video_clients = []
+audio_clients = []
+
+# Function to handle a single client's video stream
+def handle_client_video(client_socket, addr):
+    connection = client_socket.makefile('wb')
+
+    try:
+        cap = cv2.VideoCapture(0)  # 0 for the default camera
+
+        while True:
+            ret, frame = cap.read()
+
+            # Serialize the frame and send it to the client
+            data = pickle.dumps(frame)
+            size = struct.pack('!I', len(data))
+            connection.write(size)
+            connection.write(data)
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        cap.release()
+        connection.close()
+        client_socket.close()
+        print(f"Connection with {addr} closed.")
 
 
-# Generate RSA key pair for each client
-def generate_key_pair():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
-    public_key = private_key.public_key()
-    return private_key, public_key
+# Function to handle a single client's audio stream
+def handle_client_audio(client_socket, addr):
+    connection = client_socket.makefile('wb')
 
-# Encrypt message using recipient's public key
-def encrypt_message(message, public_key):
-    encrypted_message = public_key.encrypt(
-        message.encode(),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return encrypted_message
+    try:
+        while True:
+            # Record audio from microphone
+            data = sd.rec(44100, channels=2, dtype=np.int16)
+            sd.wait()
 
-# Decrypt message using private key
-def decrypt_message(encrypted_message, private_key):
-    decrypted_message = private_key.decrypt(
-        encrypted_message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return decrypted_message.decode()
+            # Serialize the audio data and send it to the client
+            data_serialized = pickle.dumps(data)
+            size = struct.pack('!I', len(data_serialized))
+            connection.write(size)
+            connection.write(data_serialized)
 
-# Client handling function
-def handle_client(client_socket, client_public_key):
-    while True:
-        encrypted_message = client_socket.recv(4096)
-        if not encrypted_message:
-            break
-        decrypted_message = decrypt_message(encrypted_message, private_key)
-        print("Received message:", decrypted_message)
+    except Exception as e:
+        print(f"Error: {e}")
 
-# Main function
-if __name__ == "__main__":
-    private_key, public_key = generate_key_pair()
-
-    host = '127.0.0.1'
-    port = 12345
-
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(5)
-
-    print("Server listening on {}:{}".format(host, port))
-
-    while True:
-        client_socket, client_addr = server_socket.accept()
-        print("Client connected:", client_addr)
-
-        # Send public key to client
-        serialized_public_key = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        client_socket.sendall(serialized_public_key)
-
-        # Start a new thread to handle client
-        threading.Thread(target=handle_client, args=(client_socket, public_key)).start()
+    finally:
+        connection.close()
+        client_socket.close()
+        print(f"Connection with {addr} closed.")
 
 
+# Set up server sockets for video and audio
+video_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+video_server.bind(("0.0.0.0", 12345))
+video_server.listen(2)
 
-# working server
+audio_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+audio_server.bind(("0.0.0.0", 12346))
+audio_server.listen(2)
+
+# Main server loop for video
+while True:
+    video_client_socket, addr = video_server.accept()
+    print(f"Accepted video connection from {addr}")
+    video_clients.append(video_client_socket)
+
+    audio_client_socket, addr = audio_server.accept()
+    print(f"Accepted audio connection from {addr}")
+    audio_clients.append(audio_client_socket)
+
+    threading.Thread(target=handle_client_video, args=(video_client_socket, addr)).start()
+    threading.Thread(target=handle_client_audio, args=(audio_client_socket, addr)).start()
+
 
 # import socket
+#
+#
+# listening_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# listening_sock.bind(('127.0.0.1', 8200))
+
+#
+# msg, client_address = listening_sock.recvfrom(1024)
+# listening_sock.sendto(msg, client_address)
+#
+# listening_sock.close()
+
+
+# import cv2
+# import numpy as np
+# import socket
 # import threading
-# from ClientObj import Client
-# from firebase_class import Firebase
-# from hashlib import sha256
 #
-# # Server configuration
-# HOST = '127.0.0.1'
-# PORT = 7000
+# server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# server.bind(("0.0.0.0", 12345))
+# server.listen(5)
+# print("Server listening on port 12345")
 #
-# # List to store connected clients
-# clients = []
-#
-# admin_help_msg = """** Hi there!
-#     Here are the functions you can use:
-#         1. video call
-#         2. get all the usernames in the chat - enter 'get all usernames'
-#         3. chat with friends
-#         4. private chat with a member - enter 'dm <name>:<message>'
-#
-#     Also, because you're an admin you have more options:
-#         1. mute someone - enter mute:<name>
-#         2. unmute someone - enter 'unmute:<name>'
-#         3. mute all non admin users - enter 'mute everyone'
-#         4. kick a user - enter 'kick:<name>'
-#         5. add/remove censored word - enter '<add/remove>:<word>'
-#     to return to this message enter 'help'
-#     have fun!! **"""
-# help_msg = """** Hi there!
-#     Here are the functions you can use:
-#         1. video call
-#         2. get all the usernames in the chat - enter 'get all usernames'
-#         3. chat with friends
-#         4. private chat with a member - enter 'dm <name>:<message>'
-#     to return to this message enter 'help'
-#     have fun!! **"""
-#
-# users_firebase = Firebase("Users")
-# censored_firebase = Firebase("Censored")
-#
-#
-# def check_username(my_client: Client, username):
+# def receive_frames():
 #     while True:
-#         hashed_username = sha256(username.encode()).hexdigest()
-#         if hashed_username in users_firebase.get_childs_lst():
-#             my_client.client_socket.send("this username is already used, please enter a different one".encode())
-#             username = my_client.client_socket.recv(1024).decode()
-#         else:
-#             # my_client.name = username
-#             return hashed_username
+#         client_socket, _ = server.accept()
+#         data = b""
 #
-#
-# def sign_up(my_client: Client):
-#     my_client.client_socket.send("enter username: ".encode())
-#     username = my_client.client_socket.recv(1024).decode()
-#     hashed_username = check_username(my_client, username)
-#
-#     my_client.client_socket.send("enter password: ".encode())
-#     password = my_client.client_socket.recv(1024).decode()
-#     hashed_pass = sha256(password.encode()).hexdigest()
-#
-#     user = Firebase(f"Users/{hashed_username}")
-#     user.update_value("name", hashed_username)
-#     user.update_value("password", hashed_pass)
-#
-#     my_client.client_socket.send("sign up succeed".encode())
-#     my_client.name = username
-#
-#
-# def check_password(my_client: Client, username, password):
-#     user = Firebase(f"Users/{username}")
-#     for i in range(3):
-#         hashed_pass = sha256(password.encode()).hexdigest()
-#         if hashed_pass != user.get_data("password"):
-#             my_client.client_socket.send("wrong password... enter a different one".encode())
-#             password = my_client.client_socket.recv(1024).decode()
-#         else:
-#             return True
-#     return False
-#
-#
-# def log_in(my_client: Client):
-#     my_client.client_socket.send("enter username: ".encode())
-#     username = my_client.client_socket.recv(1024).decode()
-#     hashed_username = sha256(username.encode()).hexdigest()
-#     if hashed_username in users_firebase.get_childs_lst():
-#         my_client.client_socket.send("enter password: ".encode())
-#         password = my_client.client_socket.recv(1024).decode()
-#
-#         is_in = check_password(my_client, hashed_username, password)
-#         if is_in:
-#             my_client.client_socket.send("log in succeed".encode())
-#             my_client.name = username
-#         else:
-#             my_client.client_socket.send("you ran out of tries...".encode())
-#
-#
-# def approve_message_content(my_client: Client, message):
-#     for word in censored_firebase.get_childs_lst():
-#         word_obj = Firebase(f"Censored/{word.lower()}")
-#         if word_obj.get_data("on") == "yes" and word in message.lower():
-#             my_client.client_socket.send(f"the word '{word}' isn't approved.".encode())
-#             return False
-#     return True
-#
-#
-# def broadcast(message, my_client: Client):
-#     for client in clients:
-#         if client != my_client and client.name:
-#             try:
-#                 message = f"{my_client.name}: {message}"
-#                 client.client_socket.send(message.encode())
-#             except Exception:
-#                 # Remove the client if unable to send a message
-#                 clients.remove(client)
-#
-#
-# def send_everyone(message):
-#     for client in clients:
-#         message = f"-- {message} --"
-#         client.client_socket.send(message.encode())
-#
-#
-# def get_all_usernames():
-#     num = 1
-#     names_str = ""
-#     for client in clients:
-#         names_str += f"{num}. {client.name}\n"
-#         num += 1
-#     return names_str
-#
-#
-# def priv_chat(my_client: Client, message):
-#     name = message.split(":")[0][2:].strip()
-#     print(name)
-#     msg = message.split(":")[1]
-#     check = False
-#     for client in clients:
-#         if client.name == name:
-#             client.client_socket.send(f"--> {my_client.name}: {msg}".encode())
-#             check = True
-#     if not check:
-#         my_client.client_socket.send("The username doesnt exist...".encode())
-#
-#
-# # admin only
-# def mute_user(user_name):
-#     for client in clients:
-#         if client.name == user_name:
-#             client.mute = True
-#     send_everyone(f"{user_name} has been muted")
-#
-#
-# def unmute_user(user_name):
-#     for client in clients:
-#         if client.name == user_name:
-#             client.mute = False
-#     send_everyone(f"{user_name} has been unmuted")
-#
-#
-# def mute_not_admins():
-#     for client in clients:
-#         if not client.admin:
-#             client.mute = True
-#     send_everyone("-- only admins can send msgs --")
-#
-#
-# def kick_user(user_name):
-#     for client in clients:
-#         if client.name == user_name:
-#             client.client_socket.send("you've been kicked...bye".encode())
-#             client_thread.join()
-#             client.client_socket.close()
-#     send_everyone(f"{user_name} has been kicked")
-#
-#
-# def add_censored_word(word):
-#     censored_word = Firebase(f"Censored/{word.lower()}")
-#     censored_word.update_value("on", "yes")
-#
-#
-# def approve_censored_word(word):
-#     word1 = Firebase(f"Censored/{word.lower()}")
-#     word1.update_value("on", "no")
-#
-#
-# # Function to handle incoming messages from a client
-# def handle_client(current_client: Client):
-#     current_client.client_socket.send("sign up/log in ?".encode())
-#     comm = current_client.client_socket.recv(1024).decode()
-#     if comm.lower() == "sign up":
-#         sign_up(current_client)
-#         if current_client.admin:
-#             current_client.client_socket.send(admin_help_msg.encode())
-#         else:
-#             current_client.client_socket.send(help_msg.encode())
-#     else:
-#         log_in(current_client)
-#
-#     while True:
-#         try:
-#             message = current_client.client_socket.recv(1024).decode()
-#             if not message:
+#         while True:
+#             packet = client_socket.recv(65536)  # Increased buffer size
+#             if not packet:
 #                 break
 #
-#             if message.lower() == "help":
-#                 if current_client.admin:
-#                     current_client.client_socket.send(admin_help_msg.encode())
-#                 else:
-#                     current_client.client_socket.send(help_msg.encode())
+#             data += packet
+#             img_array = np.frombuffer(data, dtype=np.uint8)
+#             frame = cv2.imdecode(img_array, 1)  # 1 for an image with colors
 #
-#             elif "unmute" in message.lower():
-#                 if current_client.admin:
-#                     user_name = message.split(":")[1]  # unmute:name
-#                     unmute_user(user_name)
-#                 else:
-#                     current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
+#             if frame is not None:
+#                 print("Received a frame")
+#                 print(frame)
+#                 cv2.imshow("Server Video", frame)
+#                 cv2.waitKey(1)  # Ensure that the window updates
 #
-#             elif "mute everyone" in message.lower():
-#                 mute_not_admins()
+#             if cv2.waitKey(1) & 0xFF == ord('q'):
+#                 break
 #
-#             elif "mute" in message.lower():
-#                 if current_client.admin:
-#                     user_name = message.split(":")[1]  # mute:name
-#                     mute_user(user_name)
-#                 else:
-#                     current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
-#
-#             elif "kick" in message.lower():
-#                 if current_client.admin:
-#                     username = message.split(":")[1]  # kick:name
-#                     kick_user(username)
-#                 else:
-#                     current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
-#
-#             elif "add censored word" in message.lower():
-#                 if current_client.admin:
-#                     word = message.split(":")[1]  # add censored word:word
-#                     add_censored_word(word)
-#                 else:
-#                     current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
-#
-#             elif "approve censored word" in message.lower():
-#                 if current_client.admin:
-#                     word = message.split(":")[1]  # approve censored word:word
-#                     approve_censored_word(word)
-#                 else:
-#                     current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
-#
-#             elif message.lower() == "get all usernames":
-#                 current_client.client_socket.send(get_all_usernames().encode())
-#
-#             elif message.lower().startswith("dm "):
-#                 priv_chat(current_client, message)  # dm name:msg
-#
-#             else:
-#                 if not current_client.mute and approve_message_content(current_client, message):
-#                     broadcast(message, current_client)
-#                 else:
-#                     current_client.client_socket.send("The message couldn't sent".encode())
-#         except Exception:
-#             # Remove the client if an error occurs
-#             clients.remove(current_client)
-#             break
+#         client_socket.close()
 #
 #
-# # Server setup
-# server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# server_socket.bind((HOST, PORT))
-# server_socket.listen()
+# # Start the receive thread
+# receive_thread = threading.Thread(target=receive_frames)
+# receive_thread.start()
 #
-# print(f"Server listening on {HOST}:{PORT}")
-#
-# # Accept and handle incoming connections
+# # Add an event loop for the OpenCV window
 # while True:
-#     if len(clients) >= 1:
-#         admin = False
-#     else:
-#         admin = True
+#     if cv2.waitKey(1) & 0xFF == ord('q'):
+#         break
 #
-#     client_socket, addr = server_socket.accept()
-#     current_client = Client(client_socket, "", admin, False, False, "", "")
-#     clients.append(current_client)
-#
-#     # Start a new thread to handle the client
-#     client_thread = threading.Thread(target=handle_client, args=(current_client,))
-#     client_thread.start()
-
-
+# # Cleanup code
+# server.close()
+# cv2.destroyAllWindows()

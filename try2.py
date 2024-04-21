@@ -1,104 +1,142 @@
-# client
-
+# Client
 import socket
-# from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
+import threading
+import struct
+import pickle
+import tkinter as tk
+from PIL import Image, ImageTk
+import cv2
+import sounddevice as sd
+import numpy as np
 
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+# Set up client sockets for video and audio
+video_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+video_client.connect(("127.0.0.1", 12345))
 
+audio_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+audio_client.connect(("127.0.0.1", 12346))
 
-# Generate RSA key pair for client
-def generate_key_pair():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
-    public_key = private_key.public_key()
-    return private_key, public_key
+# Function to update video frames in the GUI
+def update_video():
+    try:
+        while True:
+            # Receive the size of the incoming frame
+            size = struct.unpack('!I', video_client.recv(4))[0]
 
+            # Receive and deserialize the frame
+            data = b""
+            while len(data) < size:
+                packet = video_client.recv(size - len(data))
+                if not packet:
+                    break
+                data += packet
 
-# Encrypt message using server's public key
-def encrypt_message(message, public_key):
-    encrypted_message = public_key.encrypt(
-        message.encode(),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return encrypted_message
+            if not data:
+                break
 
-# Decrypt message using client's private key
-def decrypt_message(encrypted_message, private_key):
-    decrypted_message = private_key.decrypt(
-        encrypted_message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return decrypted_message.decode()
+            frame = pickle.loads(data)
 
+            # Update the video panel
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame)
+            img = ImageTk.PhotoImage(img)
+            panel.img = img
+            panel.config(image=img)
+            panel.image = img
 
-# Main function
-if __name__ == "__main__":
-    private_key, public_key = generate_key_pair()
+    except Exception as e:
+        print(f"Error: {e}")
+        root.destroy()
 
-    host = '127.0.0.1'
-    port = 12345
+# Function to play received audio
+def play_audio():
+    try:
+        while True:
+            # Receive the size of the incoming audio data
+            size = struct.unpack('!I', audio_client.recv(4))[0]
 
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
+            # Receive and deserialize the audio data
+            data = b""
+            while len(data) < size:
+                packet = audio_client.recv(size - len(data))
+                if not packet:
+                    break
+                data += packet
 
-    # Receive server's public key
-    serialized_public_key = client_socket.recv(4096)
-    server_public_key = serialization.load_pem_public_key(
-        serialized_public_key,
-        backend=default_backend()
-    )
+            if not data:
+                break
 
-    while True:
-        message = input("Enter message: ")
-        encrypted_message = encrypt_message(message, server_public_key)
-        client_socket.sendall(encrypted_message)
+            # Play the audio
+            audio_data = pickle.loads(data)
+            sd.play(audio_data, samplerate=44100, blocking=False)
 
+    except Exception as e:
+        print(f"Error: {e}")
+        root.destroy()
 
-# working client
+# GUI setup using Tkinter
+root = tk.Tk()
+root.title("Video Chat Client")
+
+# Create a label for displaying video frames
+panel = tk.Label(root)
+panel.pack(padx=10, pady=10)
+
+# Start new threads to handle video reception and audio playback
+threading.Thread(target=update_video, daemon=True).start()
+threading.Thread(target=play_audio, daemon=True).start()
+
+# Start the Tkinter main loop
+root.mainloop()
+
 
 # import socket
+#
+#
+# sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address = ("127.0.0.1", 8200)
+#
+# sock.sendto('moriya'.encode(), server_address)
+# data = sock.recv(1024).decode()
+#
+#
+# sock.close()
+
+
+# import cv2
+# import numpy as np
+# import socket
 # import threading
+# import time
 #
-# # Client configuration
-# HOST = '127.0.0.1'
-# PORT = 7000
+# client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# client.connect(("127.0.0.1", 12345))
 #
+# cap = cv2.VideoCapture(0)  # 0 for the default camera
 #
-# # Function to receive messages from the server
-# def receive_messages(client_socket):
+# time.sleep(1)
+# def send_frames():
 #     while True:
-#         try:
-#             message = client_socket.recv(1024).decode()
-#             print(message)
-#             if message == "you've been kicked...bye":
-#                 client_socket.close()
-#         except:
-#             print("Error receiving message")
+#         ret, frame = cap.read()
+#         if not ret:
+#             print("Error with stream")
 #             break
 #
+#         frame = cv2.resize(frame, (640, 480))  # Resize the frame to a standard size
+#         # Uncomment the line below if you want to display the frame locally
+#         # cv2.imshow('frame', frame)
 #
-# # Client setup
-# client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# client_socket.connect((HOST, PORT))
+#         encoded_frame = cv2.imencode('.jpg', frame)[1].tobytes()
+#         print("Sent")
+#         client.send(encoded_frame)
+#         time.sleep(0.1)
 #
-# # Start a thread to receive messages
-# receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
-# receive_thread.start()
+#         if cv2.waitKey(1) & 0xFF == ord('q'):
+#             break
 #
-# # Main loop to send messages to the server
-# while True:
-#     message = input()
-#     client_socket.send(message.encode())
+#     cap.release()
+#     cv2.destroyAllWindows()
+#
+#
+# send_thread = threading.Thread(target=send_frames)
+# send_thread.start()
