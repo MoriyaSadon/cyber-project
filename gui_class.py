@@ -3,15 +3,20 @@ from tkinter import scrolledtext, messagebox
 
 
 class Gui1:
-    def __init__(self, login_func, signup_func, send_msg_func):
+    def __init__(self, admin_mode, login_func, signup_func, send_msg_func):
         self.root = tk.Tk()
         self.root.title("Welcome")
         self.root.geometry("350x550")
+        self.admin_mode = admin_mode
         self.login_func = login_func
         self.signup_func = signup_func
         self.send_msg_func = send_msg_func
 
     def signin_and_signup_buttons(self):
+         # Clear window
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
         # Create a frame for the message
         message_frame = tk.Frame(self.root)
         message_frame.pack(pady=10)
@@ -53,9 +58,13 @@ class Gui1:
         if comm == "Sign in":
             login_button = tk.Button(self.root, text="Sign in", command=self.on_login_button_click)
             login_button.pack(pady=10)
-        else:
+        elif comm == "Sign up":
             signup_button = tk.Button(self.root, text="Sign up", command=self.on_signup_button_click)
             signup_button.pack(pady=10)
+
+        signup_button = tk.Button(self.root, text="back", command=self.signin_and_signup_buttons)
+        signup_button.pack(pady=15)
+
 
     def on_login_button_click(self):
         username = self.username_entry.get()
@@ -71,7 +80,7 @@ class Gui1:
         self.password_entry.delete(0, tk.END)  # Clear the password entry field
         self.signup_func(username, password)
 
-    def chat_window(self, admin):
+    def chat_window(self):
         # Clear window
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -92,26 +101,16 @@ class Gui1:
 
         # functions buttons
 
+        # help guide button
+        self.help_button = tk.Button(self.root, text="help", width=15, command=lambda: self.send_msg_func("help"))
+        self.help_button.grid(row=2, column=1, padx=10, pady=5)
+
         # get usernames lst button
         self.users_lst_button = tk.Button(self.root, text="users in chat", width=15, command=lambda: self.send_msg_func("get all usernames"))
-        self.users_lst_button.grid(row=2, column=1, padx=10, pady=5)
+        self.users_lst_button.grid(row=2, column=0, padx=10, pady=5)
 
-        if admin == "True":
-            # censored word button
-            censored_word_button = tk.Button(self.root, text="edit censored words", width=15, command=self.new_window_for_censored_words)
-            censored_word_button.grid(row=2, column=0, padx=10, pady=5)
-
-            # mute button
-            mute_button = tk.Button(self.root, text="mute users", width=15, command=lambda: self.new_window_for_mute_unmute("mute"))
-            mute_button.grid(row=3, column=1, padx=10, pady=5)
-
-            # unmute button
-            unmute_button = tk.Button(self.root, text="unmute users", width=15, command=lambda: self.new_window_for_mute_unmute("unmute"))
-            unmute_button.grid(row=3, column=0, padx=10, pady=5)
-
-            # make admin button"
-            make_admin_button = tk.Button(self.root, text="make admin", width=15, command=self.new_window_for_make_admin)
-            make_admin_button.grid(row=4, column=0, padx=10, pady=5)
+        if self.admin_mode:
+            self.admin_buttons()
 
     def send_message(self):
         message = self.message_entry.get()
@@ -127,6 +126,27 @@ class Gui1:
         self.chat_display.insert(tk.END, message + '\n')
         self.chat_display.see(tk.END)  # Scroll to the bottom of the chat display
         self.chat_display.config(state=tk.DISABLED)  # Disable editing of chat display
+
+    def admin_buttons(self):
+        # censored word button
+        censored_word_button = tk.Button(self.root, text="edit censored words", width=15, command=self.new_window_for_censored_words)
+        censored_word_button.grid(row=3, column=0, padx=10, pady=5)
+
+        # mute button
+        mute_button = tk.Button(self.root, text="mute users", width=15, command=lambda: self.new_window_for_mute_unmute("mute"))
+        mute_button.grid(row=3, column=1, padx=10, pady=5)
+
+        # unmute button
+        unmute_button = tk.Button(self.root, text="unmute users", width=15, command=lambda: self.new_window_for_mute_unmute("unmute"))
+        unmute_button.grid(row=4, column=0, padx=10, pady=5)
+
+        # make admin button"
+        make_admin_button = tk.Button(self.root, text="make admin", width=15, command=lambda: self.new_window_for_make_admin_or_kick("make admin"))
+        make_admin_button.grid(row=4, column=1, padx=10, pady=5)
+
+        # kick button"
+        make_admin_button = tk.Button(self.root, text="kick a user", width=15, command=lambda: self.new_window_for_make_admin_or_kick("kick"))
+        make_admin_button.grid(row=5, column=0, padx=10, pady=5)
 
     def new_window_for_mute_unmute(self, comm):
         # Create the options window
@@ -163,18 +183,18 @@ class Gui1:
         btn_cancel = tk.Button(root, text="remove word", command=lambda: self.label_window("remove censored word", root))
         btn_cancel.pack(pady=5)
 
-    def new_window_for_make_admin(self):
+    def new_window_for_make_admin_or_kick(self, comm):
         # Create the options window
         root = tk.Tk()
-        root.title("make a user an admin")
-        self.label_window("make admin", root)
+        root.title(comm)
+        self.label_window(comm, root)
 
     def label_window(self, comm, root):
         # Clear window
         for widget in root.winfo_children():
             widget.destroy()
 
-        if comm == "mute" or comm == "unmute" or comm == "make admin":
+        if comm == "mute" or comm == "unmute" or comm == "make admin" or comm == "kick":
             label = "enter username"
         else:
             label = "enter word"

@@ -15,12 +15,23 @@ def receive_messages():
     while True:
         try:
             message = client_socket.recv(1024).decode()
-            if "$get all usernames$" in message:
+            if message.startswith("** Hi there!"):
+                messagebox.showinfo(title="guide", message=message)
+
+            elif "$get all usernames$" in message:
                 get_users_lst(message)
+
+            elif message == "a##you are now an admin":
+                gui_obj.admin_mode = True
+                messagebox.showinfo(title="admin", message=message[3:])
+                gui_obj.admin_buttons()
+
             elif "The message couldn't sent" in message:
                 messagebox.showwarning("couldn't sent", message)
+
             elif message.startswith("cw##"):
                 messagebox.showwarning("bad word", message[4:])
+
             elif message == "you've been kicked...bye":
                 client_socket.close()
             else:
@@ -40,9 +51,7 @@ def log_in(username, password):
         message = client_socket.recv(1024).decode()
         messagebox.showinfo(title="message", message=message)
         if message == "log in succeed":
-            message = client_socket.recv(1024).decode()
-            admin = message.split(":")[1]
-            gui_obj.chat_window(admin)
+            gui_obj.chat_window()
 
             # Start a thread to receive messages for chat
             receive_thread = threading.Thread(target=receive_messages)
@@ -59,9 +68,7 @@ def sign_up(username, password):
         message = client_socket.recv(1024).decode()
         messagebox.showinfo(title="message", message=message)
         if message == "Sign up succeed":
-            message = client_socket.recv(1024).decode()
-            admin = message.split(":")[1]
-            gui_obj.chat_window(admin)
+            gui_obj.chat_window()
 
             help_msg = client_socket.recv(1024).decode()
             messagebox.showinfo(title="guide", message=help_msg)
@@ -84,7 +91,14 @@ def get_users_lst(message):
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((HOST, PORT))
 
-gui_obj = Gui1(log_in, sign_up, send_message)
+admin = client_socket.recv(1024).decode()
+
+if admin == "True":
+    admin = True
+else:
+    admin = False
+
+gui_obj = Gui1(admin, log_in, sign_up, send_message)
 gui_obj.signin_and_signup_buttons()
 
 gui_obj.root.mainloop()

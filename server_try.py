@@ -14,26 +14,27 @@ clients = []
 admin_help_msg = """** Hi there!
     Here are the functions you can use:
         1. video call
-        2. get all the usernames in the chat - enter 'get all usernames'
+        2. get all the usernames in the chat - use button "users in chat"
         3. chat with friends
         4. private chat with a member - enter 'dm <name>:<message>'
         
     Also, because you're an admin you have more options:
-        1. mute someone - enter mute:<name>
-        2. unmute someone - enter 'unmute:<name>'
-        3. mute all non admin users - enter 'mute everyone'
-        4. kick a user - enter 'kick:<name>'
-        5. add/remove censored word - enter '<add/remove>:<word>'
-    to return to this message enter 'help'
-    have fun!! **"""
+        1. mute someone - use button "mute" -> "specific user"   
+        2. mute all non admin users - use button "mute" -> "everyone" 
+        3. unmute someone - use button "unmute" -> "specific user" 
+        4. unmute everyone - use button "unmute" -> "everyone" 
+        5. kick a user - use button "kick"
+        6. add/remove censored word - use button "edit censored words" -> "add"/"remove"
+    To return to this message click "help" button
+    Have fun!! **"""
 help_msg = """** Hi there!
     Here are the functions you can use:
         1. video call
-        2. get all the usernames in the chat - enter 'get all usernames'
+        2. get all the usernames in the chat - use button "users in chat"
         3. chat with friends
         4. private chat with a member - enter 'dm <name>:<message>'
-    to return to this message enter 'help'
-    have fun!! **"""
+    To return to this message click "help" button
+    Have fun!! **"""
 
 users_firebase = Firebase("Users")
 censored_firebase = Firebase("Censored")
@@ -134,6 +135,7 @@ def make_admin(username):
     for client in clients:
         if client.name == username:
             client.admin = True
+            client.client_socket.send("a##you are now an admin".encode())
             send_everyone(f"{username} is now an admin")
 
 def mute_user(user_name):
@@ -198,7 +200,6 @@ def handle_client(current_client: Client):
         else:
             check = log_in(username, password)
 
-    current_client.client_socket.send(f"admin:{current_client.admin}".encode())
     while True:
         try:
             message = current_client.client_socket.recv(1024).decode()
@@ -280,6 +281,11 @@ while True:
     client_socket, addr = server_socket.accept()
     current_client = Client(client_socket, "", admin, False, False, "", "")
     clients.append(current_client)
+
+    print(admin)
+
+    # send if the user is an admin
+    current_client.client_socket.send(str(admin).encode())
 
     # Start a new thread to handle the client
     client_thread = threading.Thread(target=handle_client, args=(current_client,))
