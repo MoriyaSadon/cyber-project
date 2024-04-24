@@ -74,6 +74,7 @@ def play_audio():
         print(f"Error: {e}")
         root.destroy()
 
+
 # GUI setup using Tkinter
 root = tk.Tk()
 root.title("Video Chat Client")

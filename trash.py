@@ -1,46 +1,39 @@
-import tkinter as tk
-from tkinter import scrolledtext, messagebox
+m = "cw##ghdfiovhd"
+print(m[4:])
 
 
-class ChatApp:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Chat App")
 
-        # Chat display area
-        self.chat_display = scrolledtext.ScrolledText(self.root, width=50, height=20)
-        self.chat_display.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
 
-        # Message entry field
-        self.message_entry = tk.Entry(self.root, width=40)
-        self.message_entry.grid(row=1, column=0, padx=10, pady=5)
 
-        # Send button
-        self.send_button = tk.Button(self.root, text="Send", width=10, command=self.send_message)
-        self.send_button.grid(row=1, column=1, padx=10, pady=5)
-
-        self.chat_display.config(state=tk.DISABLED)  # Disable editing of chat display
-
-    def send_message(self):
-        message = self.message_entry.get()
-        if message:
-            self.display_message(f"You: {message}")
-            self.message_entry.delete(0, tk.END)
-        else:
-            messagebox.showwarning("Empty Message", "Please enter a message.")
-
-    def display_message(self, message):
-        self.chat_display.config(state=tk.NORMAL)  # Enable editing of chat display
-        self.chat_display.insert(tk.END, message + '\n')
-        self.chat_display.see(tk.END)  # Scroll to the bottom of the chat display
-        self.chat_display.config(state=tk.DISABLED)  # Disable editing of chat display
-
-    def run(self):
-        self.root.mainloop()
-
-if __name__ == "__main__":
-    app = ChatApp()
-    app.run()
+# import tkinter as tk
+# from tkinter import messagebox
+#
+# def open_custom_dialog():
+#     # Create a new window for the custom dialog
+#     custom_dialog = tk.Toplevel(root)
+#     custom_dialog.title("Custom Dialog")
+#
+#     # Add labels, buttons, or other widgets to the custom dialog
+#     label = tk.Label(custom_dialog, text="This is a custom dialog!")
+#     label.pack()
+#
+#     # Customize buttons
+#     btn_ok = tk.Button(custom_dialog, text="OK", command=custom_dialog.destroy)
+#     btn_ok.pack(pady=10)
+#
+#     btn_cancel = tk.Button(custom_dialog, text="Cancel", command=custom_dialog.destroy)
+#     btn_cancel.pack(pady=5)
+#
+# # Create the main window
+# root = tk.Tk()
+# root.title("Main Window")
+#
+# # Create a button to open the custom dialog
+# btn_open_dialog = tk.Button(root, text="Open Custom Dialog", command=open_custom_dialog)
+# btn_open_dialog.pack(pady=20)
+#
+# # Start the Tkinter main loop
+# root.mainloop()
 
 
 

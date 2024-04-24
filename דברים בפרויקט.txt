@@ -36,5 +36,8 @@ pass:100
 username: hadar16
 pass: 246
 
+username: m
+pass: 12
+
 
 databaseurl = https://final-project-38405-default-rtdb.europe-west1.firebasedatabase.app

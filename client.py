@@ -15,9 +15,16 @@ def receive_messages():
     while True:
         try:
             message = client_socket.recv(1024).decode()
-            gui_obj.display_message(message)
-            if message == "you've been kicked...bye":
+            if "$get all usernames$" in message:
+                get_users_lst(message)
+            elif "The message couldn't sent" in message:
+                messagebox.showwarning("couldn't sent", message)
+            elif message.startswith("cw##"):
+                messagebox.showwarning("bad word", message[4:])
+            elif message == "you've been kicked...bye":
                 client_socket.close()
+            else:
+                gui_obj.display_message(message)
         except:
             print("Error receiving message")
             break
@@ -33,7 +40,9 @@ def log_in(username, password):
         message = client_socket.recv(1024).decode()
         messagebox.showinfo(title="message", message=message)
         if message == "log in succeed":
-            gui_obj.chat_window(username)
+            message = client_socket.recv(1024).decode()
+            admin = message.split(":")[1]
+            gui_obj.chat_window(admin)
 
             # Start a thread to receive messages for chat
             receive_thread = threading.Thread(target=receive_messages)
@@ -50,7 +59,9 @@ def sign_up(username, password):
         message = client_socket.recv(1024).decode()
         messagebox.showinfo(title="message", message=message)
         if message == "Sign up succeed":
-            gui_obj.chat_window(username)
+            message = client_socket.recv(1024).decode()
+            admin = message.split(":")[1]
+            gui_obj.chat_window(admin)
 
             help_msg = client_socket.recv(1024).decode()
             messagebox.showinfo(title="guide", message=help_msg)
@@ -62,6 +73,11 @@ def sign_up(username, password):
             gui_obj.open_signin_signup_window("Sign up")
     else:
         messagebox.showinfo(title="try again", message="the username and the password can't contain a space")
+
+
+def get_users_lst(message):
+    lst = message.split("$")[2]
+    messagebox.showinfo(title="users in chat", message=lst)
 
 
 # Client setup

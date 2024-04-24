@@ -85,7 +85,7 @@ def approve_message_content(my_client: Client, message):
     for word in censored_firebase.get_childs_lst():
         word_obj = Firebase(f"Censored/{word.lower()}")
         if word_obj.get_data("on") == "yes" and word in message.lower():
-            my_client.client_socket.send(f"the word '{word}' isn't approved.".encode())
+            my_client.client_socket.send(f"cw##the word '{word}' isn't approved.".encode())
             return False
     return True
 
@@ -109,7 +109,7 @@ def send_everyone(message):
 
 def get_all_usernames():
     num = 1
-    names_str = ""
+    names_str = "$get all usernames$"
     for client in clients:
         names_str += f"{num}. {client.name}\n"
         num += 1
@@ -130,12 +130,23 @@ def priv_chat(my_client: Client, message):
 
 
 # admin only
+def make_admin(username):
+    for client in clients:
+        if client.name == username:
+            client.admin = True
+            send_everyone(f"{username} is now an admin")
+
 def mute_user(user_name):
     for client in clients:
         if client.name == user_name:
             client.mute = True
     send_everyone(f"{user_name} has been muted")
 
+def mute_not_admins():
+    for client in clients:
+        if not client.admin:
+            client.mute = True
+    send_everyone("only admins can send msgs")
 
 def unmute_user(user_name):
     for client in clients:
@@ -143,13 +154,10 @@ def unmute_user(user_name):
             client.mute = False
     send_everyone(f"{user_name} has been unmuted")
 
-
-def mute_not_admins():
+def unmute_everyone():
     for client in clients:
-        if not client.admin:
-            client.mute = True
-    send_everyone("-- only admins can send msgs --")
-
+        client.mute = False
+    send_everyone("everyone is unmuted")
 
 def kick_user(user_name):
     for client in clients:
@@ -161,13 +169,16 @@ def kick_user(user_name):
 
 
 def add_censored_word(word):
+    print("in")
     censored_word = Firebase(f"Censored/{word.lower()}")
     censored_word.update_value("on", "yes")
+    send_everyone(f"{current_client.name} banned the word {word} from the chat")
 
 
 def approve_censored_word(word):
     word1 = Firebase(f"Censored/{word.lower()}")
     word1.update_value("on", "no")
+    send_everyone(f"{current_client.name} allowed the word {word} for use in the chat")
 
 
 # Function to handle incoming messages from a client
@@ -187,6 +198,7 @@ def handle_client(current_client: Client):
         else:
             check = log_in(username, password)
 
+    current_client.client_socket.send(f"admin:{current_client.admin}".encode())
     while True:
         try:
             message = current_client.client_socket.recv(1024).decode()
@@ -199,12 +211,17 @@ def handle_client(current_client: Client):
                 else:
                     current_client.client_socket.send(help_msg.encode())
 
+            if "make admin" in message.lower():
+                username = message.split(":")[1]  # make admin:name
+                make_admin(username)
+
+            elif message == "unmute everyone":
+                unmute_everyone()
+
             elif "unmute" in message.lower():
                 if current_client.admin:
                     user_name = message.split(":")[1]  # unmute:name
                     unmute_user(user_name)
-                else:
-                    current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
 
             elif "mute everyone" in message.lower():
                 mute_not_admins()
@@ -213,29 +230,21 @@ def handle_client(current_client: Client):
                 if current_client.admin:
                     user_name = message.split(":")[1]  # mute:name
                     mute_user(user_name)
-                else:
-                    current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
 
             elif "kick" in message.lower():
                 if current_client.admin:
                     username = message.split(":")[1]  # kick:name
                     kick_user(username)
-                else:
-                    current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
 
             elif "add censored word" in message.lower():
                 if current_client.admin:
                     word = message.split(":")[1]  # add censored word:word
                     add_censored_word(word)
-                else:
-                    current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
 
-            elif "approve censored word" in message.lower():
+            elif "remove censored word" in message.lower():
                 if current_client.admin:
                     word = message.split(":")[1]  # approve censored word:word
                     approve_censored_word(word)
-                else:
-                    current_client.client_socket.send("** You're not an admin, therefore you cant do that **".encode())
 
             elif message.lower() == "get all usernames":
                 current_client.client_socket.send(get_all_usernames().encode())

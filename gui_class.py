@@ -71,7 +71,7 @@ class Gui1:
         self.password_entry.delete(0, tk.END)  # Clear the password entry field
         self.signup_func(username, password)
 
-    def chat_window(self, username):
+    def chat_window(self, admin):
         # Clear window
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -90,6 +90,29 @@ class Gui1:
 
         self.chat_display.config(state=tk.DISABLED)  # Disable editing of chat display
 
+        # functions buttons
+
+        # get usernames lst button
+        self.users_lst_button = tk.Button(self.root, text="users in chat", width=15, command=lambda: self.send_msg_func("get all usernames"))
+        self.users_lst_button.grid(row=2, column=1, padx=10, pady=5)
+
+        if admin == "True":
+            # censored word button
+            censored_word_button = tk.Button(self.root, text="edit censored words", width=15, command=self.new_window_for_censored_words)
+            censored_word_button.grid(row=2, column=0, padx=10, pady=5)
+
+            # mute button
+            mute_button = tk.Button(self.root, text="mute users", width=15, command=lambda: self.new_window_for_mute_unmute("mute"))
+            mute_button.grid(row=3, column=1, padx=10, pady=5)
+
+            # unmute button
+            unmute_button = tk.Button(self.root, text="unmute users", width=15, command=lambda: self.new_window_for_mute_unmute("unmute"))
+            unmute_button.grid(row=3, column=0, padx=10, pady=5)
+
+            # make admin button"
+            make_admin_button = tk.Button(self.root, text="make admin", width=15, command=self.new_window_for_make_admin)
+            make_admin_button.grid(row=4, column=0, padx=10, pady=5)
+
     def send_message(self):
         message = self.message_entry.get()
         if message:
@@ -104,4 +127,66 @@ class Gui1:
         self.chat_display.insert(tk.END, message + '\n')
         self.chat_display.see(tk.END)  # Scroll to the bottom of the chat display
         self.chat_display.config(state=tk.DISABLED)  # Disable editing of chat display
+
+    def new_window_for_mute_unmute(self, comm):
+        # Create the options window
+        root_lil_window = tk.Tk()
+        root_lil_window.title(comm)
+
+        # Add labels, buttons, or other widgets to the custom dialog
+        label = tk.Label(root_lil_window, text=f"who do you want to {comm}")
+        label.pack()
+
+        specific_button = tk.Button(root_lil_window, text="specific user", command=lambda: self.label_window(comm, root_lil_window))
+        specific_button.pack(pady=10)
+
+        if comm == "mute":
+            specific_comm = "mute everyone"
+        else:
+            specific_comm = "unmute everyone"
+
+        everyone_button = tk.Button(root_lil_window, text="everyone", command=lambda: self.send_msg_func(specific_comm))
+        everyone_button.pack(pady=5)
+
+    def new_window_for_censored_words(self):
+        # Create the options window
+        root = tk.Tk()
+        root.title("censored word")
+
+        # Add labels, buttons, or other widgets to the custom dialog
+        label = tk.Label(root, text=f"do you want to add or remove a word?")
+        label.pack()
+
+        btn_ok = tk.Button(root, text="add word", command=lambda: self.label_window("add censored word", root))
+        btn_ok.pack(pady=10)
+
+        btn_cancel = tk.Button(root, text="remove word", command=lambda: self.label_window("remove censored word", root))
+        btn_cancel.pack(pady=5)
+
+    def new_window_for_make_admin(self):
+        # Create the options window
+        root = tk.Tk()
+        root.title("make a user an admin")
+        self.label_window("make admin", root)
+
+    def label_window(self, comm, root):
+        # Clear window
+        for widget in root.winfo_children():
+            widget.destroy()
+
+        if comm == "mute" or comm == "unmute" or comm == "make admin":
+            label = "enter username"
+        else:
+            label = "enter word"
+        ans_label = tk.Label(root, text=label)
+        ans_label.pack()
+        self.ans_entry = tk.Entry(root)
+        self.ans_entry.pack(pady=5)
+
+        submit_button = tk.Button(root, text="submit", command=lambda: self.submit(comm))
+        submit_button.pack(pady=5)
+
+    def submit(self, comm):
+        msg = f"{comm}:{self.ans_entry.get()}"
+        self.send_msg_func(msg)
 
