@@ -9,20 +9,21 @@ class Firebase:
     def __init__(self, ref):
         self.ref = db.reference(ref)
 
-# get the root ref
-# ref = db.reference("/")
-
+    # get the "link" of the wanted child
     def get_child_ref(self, child):
         ref_child = self.ref.child(child)
         return ref_child
 
+    # get the data from the wanted "key" (dictionary format)
     def get_data(self, value):
         all_data = self.ref.get()
         return all_data.get(value)
 
+    # change a value of a specific "key" or add a pair if doesnt exist
     def update_value(self, value, new_data):
         self.ref.update({value: new_data})
 
+    # get a list of all the childs in the "link"
     def get_childs_lst(self):
         valueAtRef = self.ref.get(False, True)
         return [*valueAtRef]
