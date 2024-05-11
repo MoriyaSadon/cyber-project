@@ -292,7 +292,7 @@ while True:
         admin = True
 
     client_socket, addr = server_socket.accept()
-    current_client = Client(client_socket, "", admin, False, False, "", "")
+    current_client = Client(client_socket, "", admin, False, "")
     clients.append(current_client)
 
     private_key, public_key = Encryptions_class.generate_key_pair()

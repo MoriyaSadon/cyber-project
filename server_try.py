@@ -54,9 +54,9 @@ def sign_up(username, password):
 
 
 # check if the password is correct for the username
-def check_password(username, password):
-    user = Firebase(f"Users/{username}")
-    hashed_pass = sha256(password.encode()).hexdigest()
+def check_password(hashed_username, hashed_pass):
+    user = Firebase(f"Users/{hashed_username}")
+
     if hashed_pass != user.get_data("password"):
         current_client.client_socket.send(encrypt_message(current_client, "wrong password"))
         return False
@@ -67,23 +67,24 @@ def check_password(username, password):
 def log_in(username, password):
     hashed_username = sha256(username.encode()).hexdigest()
     if hashed_username in users_firebase.get_childs_lst():
-        is_in = check_password(hashed_username, password)
+        hashed_pass = sha256(password.encode()).hexdigest()
+        is_in = check_password(hashed_username, hashed_pass)
         if is_in:
-            current_client.client_socket.send("log in succeed".encode())
+            current_client.client_socket.send(encrypt_message(current_client, "log in succeed"))
             current_client.name = username
             return True
     else:
-        current_client.client_socket.send("wrong username".encode())
+        current_client.client_socket.send(encrypt_message(current_client, "wrong username"))
     return False
 
 
 # check the message for bad words that are censored in the database
-def approve_message_content(my_client: Client, message):
+def approve_message_content(message):
     for word in censored_firebase.get_childs_lst():
         word_obj = Firebase(f"Censored/{word.lower()}")
         if word_obj.get_data("on") == "yes" and word in message.lower():
-            my_client.client_socket.send(MSGBOX.encode())
-            my_client.client_socket.send(encrypt_message(current_client, f"The word '{word}' isn't approved."))
+            current_client.client_socket.sendall(encrypt_message(current_client, MSGBOX))
+            current_client.client_socket.sendall(encrypt_message(current_client, f"The word '{word}' isn't approved."))
             return False
     return True
 
@@ -94,9 +95,8 @@ def broadcast(message, my_client: Client):
         if client != my_client and client.name:
             try:
                 message = f"{my_client.name}: {message}"
-                # client.client_socket.send(CHAT.encode())
-                client.client_socket.send(encrypt_message(client, CHAT))
-                client.client_socket.send(encrypt_message(client, message))
+                client.client_socket.sendall(encrypt_message(client, CHAT))
+                client.client_socket.sendall(encrypt_message(client, message))
             except Exception:
                 # Remove the client if unable to send a message
                 clients.remove(client)
@@ -104,10 +104,10 @@ def broadcast(message, my_client: Client):
 
 # send a message to all the clients in the chat
 def send_everyone(message):
+    message = f"-- {message} --"
     for client in clients:
-        message = f"-- {message} --"
-        client.client_socket.send(CHAT.encode())
-        client.client_socket.send(encrypt_message(client, message))
+        client.client_socket.sendall(encrypt_message(client, CHAT))
+        client.client_socket.sendall(encrypt_message(client, message))
 
 
 # get a list of the users connected to the chat
@@ -129,23 +129,28 @@ def priv_chat(my_client: Client, message):
     check = False
     for client in clients:
         if client.name == name:
-            client.client_socket.send(CHAT.encode())
-            client.client_socket.send(f"--> {my_client.name}: {msg}".encode())
+            full_msg = f"--> {my_client.name}: {msg}"
+            client.client_socket.send(encrypt_message(my_client, CHAT))
+            client.client_socket.send(encrypt_message(client, full_msg))
             check = True
     if not check:
-        my_client.client_socket.send(CHAT.encode())
-        my_client.client_socket.send("** The username doesnt exist... **".encode())
+        my_client.client_socket.send(encrypt_message(my_client, CHAT))
+        my_client.client_socket.send(encrypt_message(my_client, "** The username doesnt exist... **"))
 
 
 # --admin only--
 # make a specific user an admin in the chat
 def make_admin(username):
+    print("in")
     for client in clients:
+        print("in1")
         if client.name == username:
+            print("in2")
             client.admin = True
-            client.client_socket.send(MSGBOX.encode())
-            client.client_socket.send("you are now an admin".encode())
             send_everyone(f"{username} is now an admin")
+            client.client_socket.sendall(encrypt_message(client, MSGBOX))
+            client.client_socket.sendall(encrypt_message(client, "you are now an admin"))
+
 
 # mute a specific user in the chat so that he can't send messages
 def mute_user(user_name):
@@ -178,15 +183,14 @@ def unmute_everyone():
 def kick_user(user_name):
     for client in clients:
         if client.name == user_name:
-            client.client_socket(MSGBOX.encode())
-            client.client_socket.send("you've been kicked...bye".encode())
+            client.client_socket(encrypt_message(client, MSGBOX))
+            client.client_socket.send(encrypt_message(client, "you've been kicked...bye"))
             client_thread.join()
             client.client_socket.close()
     send_everyone(f"{user_name} has been kicked")
 
 # add a word to the censored words list in database
 def add_censored_word(word):
-    print("in")
     censored_word = Firebase(f"Censored/{word.lower()}")
     censored_word.update_value("on", "yes")
     send_everyone(f"{current_client.name} banned the word {word} from the chat")
@@ -202,22 +206,23 @@ def approve_censored_word(word):
 def handle_client(current_client: Client):
     check = False
     while not check:
-        comm = current_client.client_socket.recv(1024).decode()
-        # comm = decrypt_message(enc_comm)
-        data = current_client.client_socket.recv(1024).decode().split(" ")
-        # data = decrypt_message(enc_data).split(" ")
+        enc_comm = current_client.client_socket.recv(1024)
+        comm = decrypt_message(enc_comm)
+        enc_data = current_client.client_socket.recv(1024)
+        data = decrypt_message(enc_data).split(" ")
         username = data[0]
         password = data[1]
         if comm.lower() == "sign up":
             check = sign_up(username, password)
-            current_client.client_socket.send(MSGBOX.encode())
+            current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
             if current_client.admin:
-                current_client.client_socket.send(encrypt_message(current_client,"admin_help_msg"))
+                current_client.client_socket.send(encrypt_message(current_client, "admin_help_msg"))
             else:
                 current_client.client_socket.send(encrypt_message(current_client, "help_msg"))
         else:
             check = log_in(username, password)
 
+    # send_everyone(f"{current_client.name} joined the chat")
     while True:
         try:
             enc_comm = current_client.client_socket.recv(1024)
@@ -225,19 +230,17 @@ def handle_client(current_client: Client):
             enc_message = current_client.client_socket.recv(1024)
             message = decrypt_message(enc_message)
 
-            print(comm)
-            print(message)
             if not message:
                 break
             if comm == FUNCS:
-                if message.lower() == "help":
-                    current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
-                    if current_client.admin:
-                        current_client.client_socket.send(encrypt_message(current_client, admin_help_msg))
-                    else:
-                        current_client.client_socket.send(encrypt_message(current_client, help_msg))
+                # if message.lower() == "help":
+                #     current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
+                #     if current_client.admin:
+                #         current_client.client_socket.send(encrypt_message(current_client, admin_help_msg))
+                #     else:
+                #         current_client.client_socket.send(encrypt_message(current_client, help_msg))
 
-                elif message.lower() == "get all usernames":
+                if message.lower() == "get all usernames":
                     get_all_usernames()
 
                 elif "make admin" in message.lower():
@@ -279,11 +282,12 @@ def handle_client(current_client: Client):
                 priv_chat(current_client, message)  # dm name:msg
 
             else:
-                if not current_client.mute and approve_message_content(current_client, message):
-                    # broadcast(CHAT, current_client)
+                if not current_client.mute and approve_message_content(message):
                     broadcast(message, current_client)
                 else:
-                    current_client.client_socket.send("The message couldn't sent".encode())
+                    current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
+                    current_client.client_socket.send(encrypt_message(current_client, "The message couldn't sent"))
+                    print("sent")
         except Exception:
             # Remove the client if an error occurs
             clients.remove(current_client)
@@ -309,9 +313,6 @@ while True:
     current_client = Client(client_socket, "", admin, False, "")
     clients.append(current_client)
 
-    # send if the user is an admin
-    current_client.client_socket.send(str(admin).encode())
-
     # Send public key to client
     serialized_public_key = Encryptions_class.serialize_pub_key(public_key)
     client_socket.send(serialized_public_key)
@@ -320,6 +321,9 @@ while True:
     serialized_client_pub_key = client_socket.recv(4096)
     client_pub_key = Encryptions_class.deserialize_pub_key(serialized_client_pub_key)
     current_client.rsa_pub_key = client_pub_key
+
+    # send if the user is an admin
+    current_client.client_socket.sendall(encrypt_message(current_client, str(admin)))
 
     # Start a new thread to handle the client
     client_thread = threading.Thread(target=handle_client, args=(current_client,))

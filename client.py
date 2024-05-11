@@ -63,19 +63,22 @@ def receive_messages():
             enc_message = client_socket.recv(1024)
             message = decrypt_message(enc_message)
 
+            print(comm)
+            print(message)
+
             if comm == MSGBOX:
-                if message == "admin_help_msg":
-                    messagebox.showinfo(title="guide", message=admin_help_msg)
+                # if message == "admin_help_msg":
+                #     messagebox.showinfo(title="guide", message=admin_help_msg)
+                #
+                # elif message == "help_msg":
+                #     messagebox.showinfo(title="guide", message=help_msg)
 
-                elif message == "help_msg":
-                    messagebox.showinfo(title="guide", message=help_msg)
-
-                elif message.startswith("get all usernames"):
+                if message.startswith("get all usernames"):
                     messagebox.showinfo(title="users in chat", message=message[17:])
 
                 elif message == "you are now an admin":
                     gui_obj.admin_mode = True
-                    messagebox.showinfo(title="admin", message=message[3:])
+                    messagebox.showinfo(title="admin", message=message)
                     gui_obj.admin_buttons()
 
                 elif "The message couldn't sent" in message:
@@ -84,10 +87,11 @@ def receive_messages():
                 elif message == "you've been kicked...bye":
                     client_socket.close()
                 else:
-                    messagebox.showwarning("bad word", message[4:])
+                    messagebox.showwarning("bad word", message)
             else:
                 gui_obj.display_message(message)
-        except:
+        except Exception as e:
+            print(e)
             print("Error receiving message")
             break
 
@@ -125,10 +129,12 @@ def send_priv_msg(username, message):
 
 # log in to the chat
 def log_in(username, password):
-    client_socket.send("Sign in".encode())
+    client_socket.send(encrypt_message("Sign in"))
     if " " not in username and " " not in password:
-        client_socket.send(f"{username} {password}".encode())
-        message = client_socket.recv(1024).decode()
+        info_msg = f"{username} {password}"
+        client_socket.send(encrypt_message(info_msg))
+        enc_message = client_socket.recv(1024)
+        message = decrypt_message(enc_message)
         messagebox.showinfo(title="message", message=message)
         if message == "log in succeed":
             gui_obj.chat_window()
@@ -143,16 +149,19 @@ def log_in(username, password):
 
 # sign up to the system and get in the chat
 def sign_up(username, password):
-    client_socket.send("Sign up".encode())
+    client_socket.send(encrypt_message("Sign up"))
     if " " not in username and " " not in password:
-        client_socket.send(f"{username} {password}".encode())
-        message = client_socket.recv(1024).decode()
+        info_msg = f"{username} {password}"
+        client_socket.send(encrypt_message(info_msg))
+        enc_message = client_socket.recv(1024)
+        message = encrypt_message(enc_message)
         messagebox.showinfo(title="message", message=message)
         if message == "Sign up succeed":
             gui_obj.chat_window()
 
-            help_msg = client_socket.recv(1024).decode()
-            messagebox.showinfo(title="guide", message=help_msg)
+            help_guide()
+            # help_msg = client_socket.recv(1024).decode()
+            # messagebox.showinfo(title="guide", message=help_msg)
 
             # Start a thread to receive messages for chat
             receive_thread = threading.Thread(target=receive_messages)
@@ -167,9 +176,6 @@ def sign_up(username, password):
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((HOST, PORT))
 
-# is admin
-admin = client_socket.recv(1024).decode()
-
 
 # Receive server's public key
 serialized_public_key = client_socket.recv(4096)
@@ -178,6 +184,10 @@ server_public_key = Encryptions_class.deserialize_pub_key(serialized_public_key)
 # Send public key to server
 serialized_public_key = Encryptions_class.serialize_pub_key(public_key)
 client_socket.send(serialized_public_key)
+
+# is admin
+enc_admin = client_socket.recv(4096)
+admin = decrypt_message(enc_admin)
 
 
 if admin == "True":

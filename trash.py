@@ -1,18 +1,29 @@
-def encrypt_large_message(large_message, public_key):
-    chunks = []
-    max_length = (KEY_SIZE // 8) - 2 * 32 - 2
-    for i in range(0, len(large_message), max_length):
-        chunk = large_message[i:i + max_length]
-        enc_chunk = encrypt_message(chunk, public_key)
-        chunks.append(enc_chunk)
-    return chunks
+import Encryptions_class
 
-def decrypt_large_message(chunks_lst, private_key):
-    message = ""
-    for i in chunks_lst:
-        chunk = decrypt_message(i, private_key)
-        message += chunk
-    return message
+username = "shira"
+msg = f"{username} is now an admin"
+
+priv, pub = Encryptions_class.generate_key_pair()
+enc = Encryptions_class.encrypt_message(msg, pub)
+dec = Encryptions_class.decrypt_message(enc, priv)
+print(dec)
+
+
+# def encrypt_large_message(large_message, public_key):
+#     chunks = []
+#     max_length = (KEY_SIZE // 8) - 2 * 32 - 2
+#     for i in range(0, len(large_message), max_length):
+#         chunk = large_message[i:i + max_length]
+#         enc_chunk = encrypt_message(chunk, public_key)
+#         chunks.append(enc_chunk)
+#     return chunks
+#
+# def decrypt_large_message(chunks_lst, private_key):
+#     message = ""
+#     for i in chunks_lst:
+#         chunk = decrypt_message(i, private_key)
+#         message += chunk
+#     return message
 
 # from cryptography.hazmat.backends import default_backend
 # from cryptography.hazmat.primitives import serialization, hashes
