@@ -12,11 +12,10 @@ PORT = 7000
 # List to store connected clients
 clients = []
 
+# messages protocol
 CHAT = "1"
 FUNCS = "2"
 MSGBOX = "3"
-LARGE_CHAT = "14"
-LARGE_MSGBOX = "34"
 
 users_firebase = Firebase("Users")
 censored_firebase = Firebase("Censored")
@@ -219,13 +218,6 @@ def handle_client(current_client: Client):
             if not message:
                 break
             if comm == FUNCS:
-                # if message.lower() == "help":
-                #     current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
-                #     if current_client.admin:
-                #         current_client.client_socket.send(encrypt_message(current_client, admin_help_msg))
-                #     else:
-                #         current_client.client_socket.send(encrypt_message(current_client, help_msg))
-
                 if message.lower() == "get all usernames":
                     get_all_usernames()
 

@@ -40,8 +40,6 @@ help_msg = """** Hi there!
 CHAT = "1"
 FUNCS = "2"
 MSGBOX = "3"
-LARGE_CHAT = "14"
-LARGE_MSGBOX = "34"
 
 # encrypts a message with RSA
 def encrypt_message(message):
@@ -64,12 +62,6 @@ def receive_messages():
             message = data[1:]
 
             if comm == MSGBOX:
-                # if message == "admin_help_msg":
-                #     messagebox.showinfo(title="guide", message=admin_help_msg)
-                #
-                # elif message == "help_msg":
-                #     messagebox.showinfo(title="guide", message=help_msg)
-
                 if message.startswith("get all usernames"):
                     messagebox.showinfo(title="users in chat", message=message[17:])
 
