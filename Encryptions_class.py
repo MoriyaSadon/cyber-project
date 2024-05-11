@@ -1,6 +1,7 @@
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
+import base64
 
 KEY_SIZE = 2048
 
@@ -25,11 +26,14 @@ def encrypt_message(message, public_key):
             label=None
         )
     )
-    return encrypted_message
+    b64_encoded = base64.b64encode(encrypted_message)
+    return b64_encoded
 
 
 # Decrypt message
-def decrypt_message(encrypted_message, private_key):
+def decrypt_message(b64_encoded, private_key):
+    encrypted_message = base64.b64decode(b64_encoded)
+
     decrypted_message = private_key.decrypt(
         encrypted_message,
         padding.OAEP(

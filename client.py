@@ -57,14 +57,11 @@ def decrypt_message(enc_message):
 def receive_messages():
     while True:
         try:
-            enc_comm = client_socket.recv(1024)
-            comm = decrypt_message(enc_comm)
+            enc_data = client_socket.recv(1024)
+            data = decrypt_message(enc_data)
 
-            enc_message = client_socket.recv(1024)
-            message = decrypt_message(enc_message)
-
-            print(comm)
-            print(message)
+            comm = data[0]
+            message = data[1:]
 
             if comm == MSGBOX:
                 # if message == "admin_help_msg":
@@ -97,35 +94,31 @@ def receive_messages():
 
 # shows the client the help msg
 def help_guide():
-    if admin:
+    if gui_obj.admin_mode:
         messagebox.showinfo(title="guide", message=admin_help_msg)
     else:
         messagebox.showinfo(title="guide", message=help_msg)
 
 # send a message to the server for the chat
 def send_chat_message(message):
-    enc_comm = encrypt_message(CHAT)
-    client_socket.send(enc_comm)
+    data = f"{CHAT}{message}"
 
-    enc_message = encrypt_message(message)
-    client_socket.send(enc_message)
+    enc_data = encrypt_message(data)
+    client_socket.send(enc_data)
 
 # sends a message to the server to use one to the tools offered
 def send_funcs_message(message):
-    enc_comm = encrypt_message(FUNCS)
-    client_socket.send(enc_comm)
+    data = f"{FUNCS}{message}"
 
-    enc_message = encrypt_message(message)
-    client_socket.send(enc_message)
+    enc_data = encrypt_message(data)
+    client_socket.send(enc_data)
 
 # sends a message to the server for a private message to a specific client
 def send_priv_msg(username, message):
-    enc_comm = encrypt_message(FUNCS)
-    client_socket.send(enc_comm)
+    data = f"{FUNCS}dm {username}:{message}"
 
-    msg = f"dm {username}:{message}"
-    enc_message = encrypt_message(msg)
-    client_socket.send(enc_message)
+    enc_data = encrypt_message(data)
+    client_socket.send(enc_data)
 
 # log in to the chat
 def log_in(username, password):

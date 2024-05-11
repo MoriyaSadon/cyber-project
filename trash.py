@@ -1,12 +1,5 @@
-import Encryptions_class
-
-username = "shira"
-msg = f"{username} is now an admin"
-
-priv, pub = Encryptions_class.generate_key_pair()
-enc = Encryptions_class.encrypt_message(msg, pub)
-dec = Encryptions_class.decrypt_message(enc, priv)
-print(dec)
+m = "dm shira:yes"
+print(m.lower()[:2])
 
 
 # def encrypt_large_message(large_message, public_key):

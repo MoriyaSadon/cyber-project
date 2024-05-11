@@ -37,7 +37,6 @@ def decrypt_message(enc_message):
 # sign up a user in the system
 def sign_up(username, password):
     hashed_username = sha256(username.encode()).hexdigest()
-    print(users_firebase.get_childs_lst())
     if hashed_username not in users_firebase.get_childs_lst():
         hashed_pass = sha256(password.encode()).hexdigest()
 
@@ -83,8 +82,7 @@ def approve_message_content(message):
     for word in censored_firebase.get_childs_lst():
         word_obj = Firebase(f"Censored/{word.lower()}")
         if word_obj.get_data("on") == "yes" and word in message.lower():
-            current_client.client_socket.sendall(encrypt_message(current_client, MSGBOX))
-            current_client.client_socket.sendall(encrypt_message(current_client, f"The word '{word}' isn't approved."))
+            current_client.client_socket.sendall(encrypt_message(current_client, f"{MSGBOX}The word '{word}' isn't approved."))
             return False
     return True
 
@@ -94,9 +92,8 @@ def broadcast(message, my_client: Client):
     for client in clients:
         if client != my_client and client.name:
             try:
-                message = f"{my_client.name}: {message}"
-                client.client_socket.sendall(encrypt_message(client, CHAT))
-                client.client_socket.sendall(encrypt_message(client, message))
+                full_message = f"{CHAT}{my_client.name}: {message}"
+                client.client_socket.sendall(encrypt_message(client, full_message))
             except Exception:
                 # Remove the client if unable to send a message
                 clients.remove(client)
@@ -104,9 +101,8 @@ def broadcast(message, my_client: Client):
 
 # send a message to all the clients in the chat
 def send_everyone(message):
-    message = f"-- {message} --"
+    message = f"{CHAT}-- {message} --"
     for client in clients:
-        client.client_socket.sendall(encrypt_message(client, CHAT))
         client.client_socket.sendall(encrypt_message(client, message))
 
 
@@ -117,39 +113,31 @@ def get_all_usernames():
     for client in clients:
         names_str += f"{num}. {client.name}\n"
         num += 1
-    current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
-    current_client.client_socket.send(encrypt_message(current_client, names_str))
+    current_client.client_socket.send(encrypt_message(current_client, f"{MSGBOX}{names_str}"))
 
 
 # send a private message to a specific user
 def priv_chat(my_client: Client, message):
     name = message.split(":")[0][2:].strip()
-    print(name)
     msg = message.split(":")[1]
     check = False
     for client in clients:
         if client.name == name:
-            full_msg = f"--> {my_client.name}: {msg}"
-            client.client_socket.send(encrypt_message(my_client, CHAT))
+            full_msg = f"{CHAT}--> {my_client.name}: {msg}"
             client.client_socket.send(encrypt_message(client, full_msg))
             check = True
     if not check:
-        my_client.client_socket.send(encrypt_message(my_client, CHAT))
-        my_client.client_socket.send(encrypt_message(my_client, "** The username doesnt exist... **"))
+        my_client.client_socket.send(encrypt_message(my_client, f"{CHAT}** The username doesnt exist... **"))
 
 
 # --admin only--
 # make a specific user an admin in the chat
 def make_admin(username):
-    print("in")
     for client in clients:
-        print("in1")
         if client.name == username:
-            print("in2")
             client.admin = True
             send_everyone(f"{username} is now an admin")
-            client.client_socket.sendall(encrypt_message(client, MSGBOX))
-            client.client_socket.sendall(encrypt_message(client, "you are now an admin"))
+            client.client_socket.sendall(encrypt_message(client, f"{MSGBOX}you are now an admin"))
 
 
 # mute a specific user in the chat so that he can't send messages
@@ -183,8 +171,7 @@ def unmute_everyone():
 def kick_user(user_name):
     for client in clients:
         if client.name == user_name:
-            client.client_socket(encrypt_message(client, MSGBOX))
-            client.client_socket.send(encrypt_message(client, "you've been kicked...bye"))
+            client.client_socket.send(encrypt_message(client, f"{MSGBOX}you've been kicked...bye"))
             client_thread.join()
             client.client_socket.close()
     send_everyone(f"{user_name} has been kicked")
@@ -222,14 +209,13 @@ def handle_client(current_client: Client):
         else:
             check = log_in(username, password)
 
-    # send_everyone(f"{current_client.name} joined the chat")
+    send_everyone(f"{current_client.name} joined the chat")
     while True:
         try:
-            enc_comm = current_client.client_socket.recv(1024)
-            comm = decrypt_message(enc_comm)
             enc_message = current_client.client_socket.recv(1024)
-            message = decrypt_message(enc_message)
-
+            data = decrypt_message(enc_message)
+            comm = data[0]
+            message = data[1:]
             if not message:
                 break
             if comm == FUNCS:
@@ -278,16 +264,14 @@ def handle_client(current_client: Client):
                         word = message.split(":")[1]  # approve censored word:word
                         approve_censored_word(word)
 
-            elif message.lower().startswith("dm "):
-                priv_chat(current_client, message)  # dm name:msg
+                elif message.lower()[:2] == "dm":
+                    priv_chat(current_client, message)  # dm name:msg
 
             else:
                 if not current_client.mute and approve_message_content(message):
                     broadcast(message, current_client)
                 else:
-                    current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
-                    current_client.client_socket.send(encrypt_message(current_client, "The message couldn't sent"))
-                    print("sent")
+                    current_client.client_socket.send(encrypt_message(current_client, f"{MSGBOX}The message couldn't sent"))
         except Exception:
             # Remove the client if an error occurs
             clients.remove(current_client)
