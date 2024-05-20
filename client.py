@@ -74,6 +74,7 @@ def receive_messages():
                     messagebox.showwarning("couldn't sent", message)
 
                 elif message == "you've been kicked...bye":
+                    messagebox.showinfo(title="admin", message=message)
                     client_socket.close()
                 else:
                     messagebox.showwarning("bad word", message)
@@ -114,9 +115,10 @@ def send_priv_msg(username, message):
 
 # log in to the chat
 def log_in(username, password):
-    client_socket.send(encrypt_message("Sign in"))
+    # client_socket.send(encrypt_message("Sign in"))
     if " " not in username and " " not in password:
-        info_msg = f"{username} {password}"
+        info_msg = f"Signin{username} {password}"
+
         client_socket.send(encrypt_message(info_msg))
         enc_message = client_socket.recv(1024)
         message = decrypt_message(enc_message)
@@ -134,19 +136,17 @@ def log_in(username, password):
 
 # sign up to the system and get in the chat
 def sign_up(username, password):
-    client_socket.send(encrypt_message("Sign up"))
+    # client_socket.send(encrypt_message("Sign up"))
     if " " not in username and " " not in password:
-        info_msg = f"{username} {password}"
+        info_msg = f"Signup{username} {password}"
         client_socket.send(encrypt_message(info_msg))
         enc_message = client_socket.recv(1024)
-        message = encrypt_message(enc_message)
+        message = decrypt_message(enc_message)
         messagebox.showinfo(title="message", message=message)
         if message == "Sign up succeed":
             gui_obj.chat_window()
 
             help_guide()
-            # help_msg = client_socket.recv(1024).decode()
-            # messagebox.showinfo(title="guide", message=help_msg)
 
             # Start a thread to receive messages for chat
             receive_thread = threading.Thread(target=receive_messages)

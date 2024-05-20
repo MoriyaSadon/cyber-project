@@ -45,6 +45,7 @@ def sign_up(username, password):
 
         current_client.client_socket.send(encrypt_message(current_client, "Sign up succeed"))
         current_client.name = username
+        print(current_client.name)
         return True
     else:
         current_client.client_socket.send(encrypt_message(current_client, "This username is already used, please enter a different one"))
@@ -70,6 +71,7 @@ def log_in(username, password):
         if is_in:
             current_client.client_socket.send(encrypt_message(current_client, "log in succeed"))
             current_client.name = username
+            print(current_client.name)
             return True
     else:
         current_client.client_socket.send(encrypt_message(current_client, "wrong username"))
@@ -106,13 +108,14 @@ def send_everyone(message):
 
 
 # get a list of the users connected to the chat
-def get_all_usernames():
+def get_all_usernames(my_client: Client):
     num = 1
     names_str = "get all usernames"
     for client in clients:
         names_str += f"{num}. {client.name}\n"
         num += 1
-    current_client.client_socket.send(encrypt_message(current_client, f"{MSGBOX}{names_str}"))
+    print(names_str)
+    my_client.client_socket.send(encrypt_message(my_client, f"{MSGBOX}{names_str}"))
 
 
 # send a private message to a specific user
@@ -171,44 +174,40 @@ def kick_user(user_name):
     for client in clients:
         if client.name == user_name:
             client.client_socket.send(encrypt_message(client, f"{MSGBOX}you've been kicked...bye"))
+            clients.remove(client)
             client_thread.join()
             client.client_socket.close()
     send_everyone(f"{user_name} has been kicked")
 
 # add a word to the censored words list in database
-def add_censored_word(word):
+def add_censored_word(word, my_client: Client):
     censored_word = Firebase(f"Censored/{word.lower()}")
     censored_word.update_value("on", "yes")
-    send_everyone(f"{current_client.name} banned the word {word} from the chat")
+    send_everyone(f"{my_client.name} banned the word {word} from the chat")
 
 # remove a word from the censored words list in the database
-def approve_censored_word(word):
+def approve_censored_word(word, my_client: Client):
     word1 = Firebase(f"Censored/{word.lower()}")
     word1.update_value("on", "no")
-    send_everyone(f"{current_client.name} allowed the word {word} for use in the chat")
+    print(current_client.name)
+    send_everyone(f"{my_client.name} allowed the word {word} for use in the chat")
 
 
 # Function to handle incoming messages from a client
 def handle_client(current_client: Client):
     check = False
     while not check:
-        enc_comm = current_client.client_socket.recv(1024)
-        comm = decrypt_message(enc_comm)
         enc_data = current_client.client_socket.recv(1024)
         data = decrypt_message(enc_data).split(" ")
-        username = data[0]
+        comm = data[0][:6]
+        username = data[0][6:]
         password = data[1]
-        if comm.lower() == "sign up":
+        if comm.lower() == "signup":
             check = sign_up(username, password)
-            current_client.client_socket.send(encrypt_message(current_client, MSGBOX))
-            if current_client.admin:
-                current_client.client_socket.send(encrypt_message(current_client, "admin_help_msg"))
-            else:
-                current_client.client_socket.send(encrypt_message(current_client, "help_msg"))
         else:
             check = log_in(username, password)
-
     send_everyone(f"{current_client.name} joined the chat")
+
     while True:
         try:
             enc_message = current_client.client_socket.recv(1024)
@@ -219,7 +218,8 @@ def handle_client(current_client: Client):
                 break
             if comm == FUNCS:
                 if message.lower() == "get all usernames":
-                    get_all_usernames()
+
+                    get_all_usernames(current_client)
 
                 elif "make admin" in message.lower():
                     username = message.split(":")[1]  # make admin:name
@@ -249,12 +249,12 @@ def handle_client(current_client: Client):
                 elif "add censored word" in message.lower():
                     if current_client.admin:
                         word = message.split(":")[1]  # add censored word:word
-                        add_censored_word(word)
+                        add_censored_word(word, current_client)
 
                 elif "remove censored word" in message.lower():
                     if current_client.admin:
                         word = message.split(":")[1]  # approve censored word:word
-                        approve_censored_word(word)
+                        approve_censored_word(word, current_client)
 
                 elif message.lower()[:2] == "dm":
                     priv_chat(current_client, message)  # dm name:msg
