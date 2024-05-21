@@ -1,4 +1,4 @@
-# Server
+# Client
 
 import socket
 import threading
@@ -10,26 +10,13 @@ import cv2
 import sounddevice as sd
 import numpy as np
 
-client2_ip = "localhost"
+client2_ip = "192.168.1.101"
 
-# Set up server sockets for video and audio
-video_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-video_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-video_server.bind((client2_ip, 12345))
-video_server.listen(2)
+video_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+video_client_socket.connect((client2_ip, 12345))
 
-video_client_socket, addr = video_server.accept()
-print(f"Accepted video connection from {addr}")
-
-
-audio_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-audio_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-audio_server.bind((client2_ip, 12346))
-audio_server.listen(2)
-
-audio_client_socket, addr = audio_server.accept()
-print(f"Accepted audio connection from {addr}")
-
+audio_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+audio_client_socket.connect((client2_ip, 12346))
 
 def send_video():
     connection = video_client_socket.makefile('wb')
@@ -52,7 +39,6 @@ def send_video():
         cap.release()
         connection.close()
         video_client_socket.close()
-        print(f"Connection with {addr} closed.")
 
 def get_video():
     try:
@@ -106,7 +92,6 @@ def send_audio():
     finally:
         connection.close()
         audio_client_socket.close()
-        print(f"Connection with {addr} closed.")
 
 
 # Function to play received audio
@@ -157,55 +142,66 @@ root.mainloop()
 
 
 
+
+
+
 # import socket
 # import threading
 # import struct
+# import cv2
+# import numpy as np
+# from PIL import Image, ImageTk
+# import tkinter as tk
 #
-# video_clients_info = {}  # Dictionary to store client addresses
-#
-# def handle_client_video(video_client_socket):
-#     # connection = client.makefile('wb')
-#     while True:
-#         # Receive the size of the incoming frame
-#         size = struct.unpack('!I', video_client_socket.recv(4))[0]
-#
-#         # Receive and send the frame to the other client
-#         data = b""
-#         while len(data) < size:
-#             remaining_bytes = size - len(data)
-#             chunk = video_client_socket.recv(min(remaining_bytes, 4096))
-#             if not chunk:
-#                 print("Connection closed unexpectedly")
-#                 break
-#             data += chunk
-#
-#         for client_socket, _ in video_clients_info.items():
-#             if client_socket != video_client_socket:
-#                 try:
-#                     client_socket.sendall(struct.pack('!I', size))
-#                     client_socket.sendall(data)
-#                 except Exception as e:
-#                     print(f"Error broadcasting video to client: {e}")
-#                     video_clients_info.pop(client_socket)  # Remove disconnected client
+# # Function to receive video frames from the server
+# def receive_video_frames(video_client):
+#     try:
+#         while True:
+#             size = struct.unpack('!I', video_client.recv(4))[0]
+#             data = b""
+#             while len(data) < size:
+#                 packet = video_client.recv(size - len(data))
+#                 if not packet:
 #                     break
+#                 data += packet
 #
-# def accept_connections():
-#     global video_clients_info
-#     while len(video_clients_info) < 2:
-#         video_client_socket, addr = video_server.accept()
-#         print(f"Accepted video connection from {addr}")
-#         video_clients_info[video_client_socket] = addr
+#             frame_data = np.frombuffer(data, dtype=np.uint8)
+#             frame = cv2.imdecode(frame_data, cv2.IMREAD_COLOR)
 #
-#     for client_socket, client_addr in video_clients_info.items():
-#         other_client_addr = next(addr for sock, addr in video_clients_info.items() if sock != client_socket)
-#         client_socket.sendall(other_client_addr.encode())
+#             # Display the frame in the GUI
+#             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#             img = Image.fromarray(frame)
+#             img = ImageTk.PhotoImage(image=img)
+#             panel.img = img
+#             panel.config(image=img)
 #
-#     threading.Thread(target=handle_client_video, args=(video_client_socket,)).start()
+#     except Exception as e:
+#         print(f"Error receiving video frames: {e}")
+#         root.destroy()
 #
-# # Set up server socket for video
-# video_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# video_server.bind(("0.0.0.0", 12345))
-# video_server.listen()
+# # Connect to the server for video
+# video_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# video_client.connect(("192.168.1.101", 12345))
 #
-# accept_connections()
+# # Function to handle video frames in the GUI
+# def update_video():
+#     threading.Thread(target=receive_video_frames, args=(video_client,), daemon=True).start()
+#
+# # GUI setup using Tkinter
+# root = tk.Tk()
+# root.title("Video Chat Client")
+#
+# # Create a label for displaying video frames
+# panel = tk.Label(root)
+# panel.pack(padx=10, pady=10)
+#
+# # Start receiving and displaying video frames
+# update_video()
+#
+# # Start the Tkinter main loop
+# root.mainloop()
+
+
+
+
 
