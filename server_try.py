@@ -3,35 +3,21 @@ import threading
 from ClientObj import Client
 from firebase_class import Firebase
 from hashlib import sha256
-import Encryptions_class
+from Encryptions_class import RsaEnc
 
-# Server configuration
-HOST = '127.0.0.1'
-PORT = 7000
-
-# List to store connected clients
-clients = []
-
-# messages protocol
-CHAT = "1"
-FUNCS = "2"
-MSGBOX = "3"
-
-users_firebase = Firebase("Users")
-censored_firebase = Firebase("Censored")
-
-private_key, public_key = Encryptions_class.generate_key_pair()
 
 # encrypts a message with RSA
 def encrypt_message(my_client: Client, message):
-    pub_key = my_client.rsa_pub_key
-    enc_msg = Encryptions_class.encrypt_message(message, pub_key)
+    client_rsa_obj = my_client.rsaObj
+    enc_msg = client_rsa_obj.encrypt_message(message)
     return enc_msg
+
 
 # decrypts a RSA encoded message
 def decrypt_message(enc_message):
-    message = Encryptions_class.decrypt_message(enc_message, private_key)
+    message = server_rsa_obj.decrypt_message(enc_message)
     return message
+
 
 # sign up a user in the system
 def sign_up(username, password):
@@ -45,10 +31,10 @@ def sign_up(username, password):
 
         current_client.client_socket.send(encrypt_message(current_client, "Sign up succeed"))
         current_client.name = username
-        print(current_client.name)
         return True
     else:
-        current_client.client_socket.send(encrypt_message(current_client, "This username is already used, please enter a different one"))
+        current_client.client_socket.send(
+            encrypt_message(current_client, "This username is already used, please enter a different one"))
     return False
 
 
@@ -62,6 +48,7 @@ def check_password(hashed_username, hashed_pass):
     else:
         return True
 
+
 # log in a user to the chat
 def log_in(username, password):
     hashed_username = sha256(username.encode()).hexdigest()
@@ -71,7 +58,6 @@ def log_in(username, password):
         if is_in:
             current_client.client_socket.send(encrypt_message(current_client, "log in succeed"))
             current_client.name = username
-            print(current_client.name)
             return True
     else:
         current_client.client_socket.send(encrypt_message(current_client, "wrong username"))
@@ -83,7 +69,8 @@ def approve_message_content(message):
     for word in censored_firebase.get_childs_lst():
         word_obj = Firebase(f"Censored/{word.lower()}")
         if word_obj.get_data("on") == "yes" and word in message.lower():
-            current_client.client_socket.sendall(encrypt_message(current_client, f"{MSGBOX}The word '{word}' isn't approved."))
+            current_client.client_socket.sendall(
+                encrypt_message(current_client, f"{MSGBOX}The word '{word}' isn't approved."))
             return False
     return True
 
@@ -114,7 +101,6 @@ def get_all_usernames(my_client: Client):
     for client in clients:
         names_str += f"{num}. {client.name}\n"
         num += 1
-    print(names_str)
     my_client.client_socket.send(encrypt_message(my_client, f"{MSGBOX}{names_str}"))
 
 
@@ -149,12 +135,14 @@ def mute_user(user_name):
             client.mute = True
     send_everyone(f"{user_name} has been muted")
 
+
 # mute all users in chat except for admins
 def mute_not_admins():
     for client in clients:
         if not client.admin:
             client.mute = True
     send_everyone("only admins can send msgs")
+
 
 # unmute a specific user so that he can send messages again
 def unmute_user(user_name):
@@ -163,11 +151,13 @@ def unmute_user(user_name):
             client.mute = False
     send_everyone(f"{user_name} has been unmuted")
 
+
 # unmute everyone in the chat
 def unmute_everyone():
     for client in clients:
         client.mute = False
     send_everyone("everyone is unmuted")
+
 
 # kick a specific user from the chat
 def kick_user(user_name):
@@ -179,11 +169,13 @@ def kick_user(user_name):
             client.client_socket.close()
     send_everyone(f"{user_name} has been kicked")
 
+
 # add a word to the censored words list in database
 def add_censored_word(word, my_client: Client):
     censored_word = Firebase(f"Censored/{word.lower()}")
     censored_word.update_value("on", "yes")
     send_everyone(f"{my_client.name} banned the word {word} from the chat")
+
 
 # remove a word from the censored words list in the database
 def approve_censored_word(word, my_client: Client):
@@ -263,12 +255,31 @@ def handle_client(current_client: Client):
                 if not current_client.mute and approve_message_content(message):
                     broadcast(message, current_client)
                 else:
-                    current_client.client_socket.send(encrypt_message(current_client, f"{MSGBOX}The message couldn't sent"))
+                    current_client.client_socket.send(
+                        encrypt_message(current_client, f"{MSGBOX}The message couldn't sent"))
         except Exception:
             # Remove the client if an error occurs
             clients.remove(current_client)
             break
 
+
+# Server configuration
+HOST = '0.0.0.0'
+PORT = 7000
+
+# List to store connected clients
+clients = []
+
+# messages protocol
+CHAT = "1"
+FUNCS = "2"
+MSGBOX = "3"
+
+users_firebase = Firebase("Users")
+censored_firebase = Firebase("Censored")
+
+server_rsa_obj = RsaEnc("", "")
+server_rsa_obj.generate_key_pair()
 
 # Server setup
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -290,13 +301,14 @@ while True:
     clients.append(current_client)
 
     # Send public key to client
-    serialized_public_key = Encryptions_class.serialize_pub_key(public_key)
+    serialized_public_key = server_rsa_obj.serialize_pub_key()
     client_socket.send(serialized_public_key)
 
     # get the client's public key
     serialized_client_pub_key = client_socket.recv(4096)
-    client_pub_key = Encryptions_class.deserialize_pub_key(serialized_client_pub_key)
-    current_client.rsa_pub_key = client_pub_key
+    client_rsa_obj = RsaEnc("", server_rsa_obj.priv_key)
+    client_rsa_obj.deserialize_pub_key(serialized_client_pub_key)
+    current_client.rsaObj = client_rsa_obj
 
     # send if the user is an admin
     current_client.client_socket.sendall(encrypt_message(current_client, str(admin)))

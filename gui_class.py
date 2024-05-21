@@ -113,7 +113,7 @@ class Gui1:
         self.help_button.grid(row=2, column=1, padx=10, pady=5)
 
         # video call button
-        self.video_call_button = tk.Button(self.root, text="video call", width=15)
+        self.video_call_button = tk.Button(self.root, text="video call", width=15, command=lambda: self.new_root_label_window("video call"))
         self.video_call_button.grid(row=2, column=0, padx=10, pady=5)
 
         # get usernames lst button
@@ -159,11 +159,11 @@ class Gui1:
         unmute_button.grid(row=4, column=0, padx=10, pady=5)
 
         # make admin button"
-        make_admin_button = tk.Button(self.root, text="make admin", width=15, command=lambda: self.new_window_for_make_admin_or_kick("make admin"))
+        make_admin_button = tk.Button(self.root, text="make admin", width=15, command=lambda: self.new_root_label_window("make admin"))
         make_admin_button.grid(row=5, column=1, padx=10, pady=5)
 
         # kick button"
-        make_admin_button = tk.Button(self.root, text="kick a user", width=15, command=lambda: self.new_window_for_make_admin_or_kick("kick"))
+        make_admin_button = tk.Button(self.root, text="kick a user", width=15, command=lambda: self.new_root_label_window("kick"))
         make_admin_button.grid(row=6, column=1, padx=10, pady=5)
 
     # send a message to a specific user (func from a button)
@@ -188,6 +188,18 @@ class Gui1:
 
         submit_button = tk.Button(root_lil_window, text="send message", command=lambda: self.send_priv_msg_func(username_entry.get(), message_entry.get()))
         submit_button.pack(pady=5)
+
+    def video_call(self):
+        # Create the options window
+        root_lil_window = tk.Tk()
+        root_lil_window.title("video call")
+
+        # Add labels, buttons, or other widgets to the custom dialog
+        label = tk.Label(root_lil_window, text=f"enter the user you want to have a call with")
+        label.pack()
+
+        specific_button = tk.Button(root_lil_window, text="specific user", command=lambda: self.label_window("video call", root_lil_window))
+        specific_button.pack(pady=10)
 
     # mute or unmute a specific user or everyone (func from buttons)
     def new_window_for_mute_unmute(self, comm):
@@ -227,7 +239,7 @@ class Gui1:
         btn_cancel.pack(pady=5)
 
     # make a user an admin or kick a user (func from buttons)
-    def new_window_for_make_admin_or_kick(self, comm):
+    def new_root_label_window(self, comm):
         # Create the options window
         root = tk.Tk()
         root.title(comm)
@@ -239,7 +251,7 @@ class Gui1:
         for widget in root.winfo_children():
             widget.destroy()
 
-        if comm == "mute" or comm == "unmute" or comm == "make admin" or comm == "kick":
+        if comm == "mute" or comm == "unmute" or comm == "make admin" or comm == "kick" or comm == "video call":
             label = "enter username"
         else:
             label = "enter word"

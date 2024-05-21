@@ -10,15 +10,7 @@ import cv2
 import sounddevice as sd
 import numpy as np
 
-client2_ip = "192.168.1.101"
-
-video_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-video_client_socket.connect((client2_ip, 12345))
-
-audio_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-audio_client_socket.connect((client2_ip, 12346))
-
-def send_video():
+def send_video(video_client_socket):
     connection = video_client_socket.makefile('wb')
     try:
         cap = cv2.VideoCapture(0)  # 0 for the default camera
@@ -40,7 +32,7 @@ def send_video():
         connection.close()
         video_client_socket.close()
 
-def get_video():
+def get_video(video_client_socket, root, panel):
     try:
         while True:
             # Receive the size of the incoming frame
@@ -71,8 +63,7 @@ def get_video():
         print(f"Error: {e}")
         root.destroy()
 
-
-def send_audio():
+def send_audio(audio_client_socket):
     connection = audio_client_socket.makefile('wb')
     try:
         while True:
@@ -93,9 +84,8 @@ def send_audio():
         connection.close()
         audio_client_socket.close()
 
-
 # Function to play received audio
-def get_audio():
+def get_audio(audio_client_socket, root):
     try:
         while True:
             # Receive the size of the incoming audio data
@@ -120,88 +110,26 @@ def get_audio():
         print(f"Error: {e}")
         root.destroy()
 
+def main(ip):
+    video_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    video_client_socket.connect((ip, 12345))
 
-# GUI setup using Tkinter
-root = tk.Tk()
-root.title("Video Chat Client")
+    audio_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    audio_client_socket.connect((ip, 12346))
 
-# Create a label for displaying video frames
-panel = tk.Label(root)
-panel.pack(padx=10, pady=10)
+    # GUI setup using Tkinter
+    root = tk.Tk()
+    root.title("Video Chat Client")
 
-# threads
-threading.Thread(target=send_video, daemon=True).start()
-threading.Thread(target=get_video, daemon=True).start()
-threading.Thread(target=send_audio, daemon=True).start()
-threading.Thread(target=get_audio, daemon=True).start()
+    # Create a label for displaying video frames
+    panel = tk.Label(root)
+    panel.pack(padx=10, pady=10)
 
+    # threads
+    threading.Thread(target=lambda: send_video(video_client_socket), daemon=True).start()
+    threading.Thread(target=lambda: get_video(video_client_socket, root, panel), daemon=True).start()
+    threading.Thread(target=lambda: send_audio(audio_client_socket), daemon=True).start()
+    threading.Thread(target=lambda: get_audio(audio_client_socket, root), daemon=True).start()
 
-# Start the Tkinter main loop
-root.mainloop()
-
-
-
-
-
-
-
-# import socket
-# import threading
-# import struct
-# import cv2
-# import numpy as np
-# from PIL import Image, ImageTk
-# import tkinter as tk
-#
-# # Function to receive video frames from the server
-# def receive_video_frames(video_client):
-#     try:
-#         while True:
-#             size = struct.unpack('!I', video_client.recv(4))[0]
-#             data = b""
-#             while len(data) < size:
-#                 packet = video_client.recv(size - len(data))
-#                 if not packet:
-#                     break
-#                 data += packet
-#
-#             frame_data = np.frombuffer(data, dtype=np.uint8)
-#             frame = cv2.imdecode(frame_data, cv2.IMREAD_COLOR)
-#
-#             # Display the frame in the GUI
-#             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#             img = Image.fromarray(frame)
-#             img = ImageTk.PhotoImage(image=img)
-#             panel.img = img
-#             panel.config(image=img)
-#
-#     except Exception as e:
-#         print(f"Error receiving video frames: {e}")
-#         root.destroy()
-#
-# # Connect to the server for video
-# video_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# video_client.connect(("192.168.1.101", 12345))
-#
-# # Function to handle video frames in the GUI
-# def update_video():
-#     threading.Thread(target=receive_video_frames, args=(video_client,), daemon=True).start()
-#
-# # GUI setup using Tkinter
-# root = tk.Tk()
-# root.title("Video Chat Client")
-#
-# # Create a label for displaying video frames
-# panel = tk.Label(root)
-# panel.pack(padx=10, pady=10)
-#
-# # Start receiving and displaying video frames
-# update_video()
-#
-# # Start the Tkinter main loop
-# root.mainloop()
-
-
-
-
-
+    # Start the Tkinter main loop
+    root.mainloop()
