@@ -10,10 +10,8 @@ import cv2
 import sounddevice as sd
 import numpy as np
 
-client2_ip = "0.0.0.0"
-
-
-def send_video(video_client_socket, addr):
+# function to record video and send it
+def send_video():
     connection = video_client_socket.makefile('wb')
     try:
         cap = cv2.VideoCapture(0)  # 0 for the default camera
@@ -36,7 +34,9 @@ def send_video(video_client_socket, addr):
         video_client_socket.close()
         print(f"Connection with {addr} closed.")
 
-def get_video(video_client_socket, root, panel):
+
+# function to receive frames and show them
+def get_video():
     try:
         while True:
             # Receive the size of the incoming frame
@@ -68,7 +68,8 @@ def get_video(video_client_socket, root, panel):
         root.destroy()
 
 
-def send_audio(audio_client_socket, addr):
+# function to record audio and send it
+def send_audio():
     connection = audio_client_socket.makefile('wb')
     try:
         while True:
@@ -92,7 +93,7 @@ def send_audio(audio_client_socket, addr):
 
 
 # Function to play received audio
-def get_audio(audio_client_socket, root):
+def get_audio():
     try:
         while True:
             # Receive the size of the incoming audio data
@@ -118,38 +119,39 @@ def get_audio(audio_client_socket, root):
         root.destroy()
 
 
-def main():
-    # Set up server sockets for video and audio
-    video_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    video_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    video_server.bind(("0.0.0.0", 12345))
-    video_server.listen(2)
+server_ip = "0.0.0.0"
 
-    video_client_socket, addr = video_server.accept()
-    print(f"Accepted video connection from {addr}")
+# Set up server sockets for video and audio
+video_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+video_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+video_server.bind((server_ip, 12345))
+video_server.listen(2)
 
-    audio_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    audio_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    audio_server.bind(("0.0.0.0", 12346))
-    audio_server.listen(2)
+video_client_socket, addr = video_server.accept()
+print(f"Accepted video connection from {addr}")
 
-    audio_client_socket, addr = audio_server.accept()
-    print(f"Accepted audio connection from {addr}")
+audio_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+audio_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+audio_server.bind((server_ip, 12346))
+audio_server.listen(2)
 
-    # GUI setup using Tkinter
-    root = tk.Tk()
-    root.title("Video Chat Client")
+audio_client_socket, addr = audio_server.accept()
+print(f"Accepted audio connection from {addr}")
 
-    # Create a label for displaying video frames
-    panel = tk.Label(root)
-    panel.pack(padx=10, pady=10)
+# GUI setup using Tkinter
+root = tk.Tk()
+root.title("Video Chat Client")
 
-    # threads
-    threading.Thread(target=lambda: send_video, daemon=True).start()
-    threading.Thread(target=lambda: get_video, daemon=True).start()
-    threading.Thread(target=lambda: send_audio, daemon=True).start()
-    threading.Thread(target=lambda: get_audio, daemon=True).start()
+# Create a label for displaying video frames
+panel = tk.Label(root)
+panel.pack(padx=10, pady=10)
+
+# threads
+threading.Thread(target=send_video, daemon=True).start()
+threading.Thread(target=get_video, daemon=True).start()
+threading.Thread(target=send_audio, daemon=True).start()
+threading.Thread(target=get_audio, daemon=True).start()
 
 
-    # Start the Tkinter main loop
-    root.mainloop()
+# Start the Tkinter main loop
+root.mainloop()
