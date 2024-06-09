@@ -4,21 +4,19 @@ from tkinter import messagebox
 from gui_class import Gui1
 from Encryptions_class import RsaEnc
 
-
 # encrypts a message with RSA
 def encrypt_message(message):
     enc_message = client_rsa_obj.encrypt_message(message)
     return enc_message
-
 
 # decrypts a RSA encoded message
 def decrypt_message(enc_message):
     message = client_rsa_obj.decrypt_message(enc_message)
     return message
 
-
 # Function to receive messages from the server
 def receive_messages():
+    # receive and handle messages from the server
     while True:
         try:
             enc_data = client_socket.recv(1024)
@@ -49,8 +47,8 @@ def receive_messages():
             else:
                 messagebox.showwarning("bad word", message)
         else:
+            # message for the chat
             gui_obj.display_message(message)
-
 
 # shows the client the help msg
 def help_guide():
@@ -59,14 +57,12 @@ def help_guide():
     else:
         messagebox.showinfo(title="guide", message=help_msg)
 
-
 # send a message to the server for the chat
 def send_chat_message(message):
     data = f"{CHAT}{message}"
 
     enc_data = encrypt_message(data)
     client_socket.send(enc_data)
-
 
 # sends a message to the server to use one to the tools offered
 def send_funcs_message(message):
@@ -75,7 +71,6 @@ def send_funcs_message(message):
     enc_data = encrypt_message(data)
     client_socket.send(enc_data)
 
-
 # sends a message to the server for a private message to a specific client
 def send_priv_msg(username, message):
     data = f"{FUNCS}dm {username}:{message}"
@@ -83,12 +78,12 @@ def send_priv_msg(username, message):
     enc_data = encrypt_message(data)
     client_socket.send(enc_data)
 
-
 # log in to the chat
 def log_in(username, password):
     if " " not in username and " " not in password:
         info_msg = f"Signin{username} {password}"
 
+        # gets the answer from the attempted log in
         client_socket.send(encrypt_message(info_msg))
         enc_message = client_socket.recv(1024)
         message = decrypt_message(enc_message)
@@ -100,15 +95,17 @@ def log_in(username, password):
             receive_thread = threading.Thread(target=receive_messages)
             receive_thread.start()
         else:
+            # log in again
             gui_obj.open_signin_signup_window("Sign in")
     else:
         messagebox.showinfo(title="try again", message="the username and the password can't contain a space")
-
 
 # sign up to the system and get in the chat
 def sign_up(username, password):
     if " " not in username and " " not in password:
         info_msg = f"Signup{username} {password}"
+
+        # gets the answer to the attempted sign up
         client_socket.send(encrypt_message(info_msg))
         enc_message = client_socket.recv(1024)
         message = decrypt_message(enc_message)
@@ -128,11 +125,8 @@ def sign_up(username, password):
 
 
 # Client configuration
-HOST = '127.0.0.1'
+HOST = '192.168.1.100'
 PORT = 7000
-
-client_rsa_obj = RsaEnc("", "")
-client_rsa_obj.generate_key_pair()
 
 admin_help_msg = """** Hi there!
     Here are the functions you can use:
@@ -164,6 +158,10 @@ help_msg = """** Hi there!
 CHAT = "1"
 FUNCS = "2"
 MSGBOX = "3"
+
+# create the rsa object
+client_rsa_obj = RsaEnc("", "")
+client_rsa_obj.generate_key_pair()
 
 # Client setup
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

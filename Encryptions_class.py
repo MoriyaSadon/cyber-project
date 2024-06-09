@@ -22,6 +22,7 @@ class RsaEnc:
 
     # Encrypt message
     def encrypt_message(self, message):
+        # encrypt with rsa
         encrypted_message = self.pub_key.encrypt(
             message.encode(),
             padding.OAEP(
@@ -30,13 +31,16 @@ class RsaEnc:
                 label=None
             )
         )
+        # encode with base64
         b64_encoded = base64.b64encode(encrypted_message)
         return b64_encoded
 
     # Decrypt message
     def decrypt_message(self, b64_encoded):
+        # decode base64
         encrypted_message = base64.b64decode(b64_encoded)
 
+        # decrypt rsa
         decrypted_message = self.priv_key.decrypt(
             encrypted_message,
             padding.OAEP(

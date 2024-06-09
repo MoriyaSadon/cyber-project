@@ -10,9 +10,7 @@ import cv2
 import sounddevice as sd
 import numpy as np
 
-
-# function to record video and send it
-def send_video():
+def send_video(video_client_socket):
     connection = video_client_socket.makefile('wb')
     try:
         cap = cv2.VideoCapture(0)  # 0 for the default camera
@@ -34,9 +32,7 @@ def send_video():
         connection.close()
         video_client_socket.close()
 
-
-# function to receive frames and show them
-def get_video():
+def get_video(video_client_socket, panel, root):
     try:
         while True:
             # Receive the size of the incoming frame
@@ -67,9 +63,7 @@ def get_video():
         print(f"Error: {e}")
         root.destroy()
 
-
-# function to record audio and send it
-def send_audio():
+def send_audio(audio_client_socket):
     connection = audio_client_socket.makefile('wb')
     try:
         while True:
@@ -90,9 +84,8 @@ def send_audio():
         connection.close()
         audio_client_socket.close()
 
-
 # Function to play received audio
-def get_audio():
+def get_audio(audio_client_socket, root):
     try:
         while True:
             # Receive the size of the incoming audio data
@@ -118,27 +111,31 @@ def get_audio():
         root.destroy()
 
 
-server_ip = "192.168.1.101"
+def main(ip):
+    video_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    video_client_socket.connect((ip, 12345))
 
-video_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-video_client_socket.connect((server_ip, 12345))
+    audio_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    audio_client_socket.connect((ip, 12346))
 
-audio_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-audio_client_socket.connect((server_ip, 12346))
+    # GUI setup using Tkinter
+    root = tk.Tk()
+    root.title("Video Chat Client")
 
-# GUI setup using Tkinter
-root = tk.Tk()
-root.title("Video Chat Client")
+    # Create a label for displaying video frames
+    panel = tk.Label(root)
+    panel.pack(padx=10, pady=10)
 
-# Create a label for displaying video frames
-panel = tk.Label(root)
-panel.pack(padx=10, pady=10)
+    # threads
+    threading.Thread(target=lambda: send_video(video_client_socket), daemon=True).start()
+    threading.Thread(target=lambda: get_video(video_client_socket, panel, root), daemon=True).start()
+    threading.Thread(target=lambda: send_audio(audio_client_socket), daemon=True).start()
+    threading.Thread(target=lambda: get_audio(audio_client_socket, root), daemon=True).start()
 
-# threads
-threading.Thread(target=send_video, daemon=True).start()
-threading.Thread(target=get_video, daemon=True).start()
-threading.Thread(target=send_audio, daemon=True).start()
-threading.Thread(target=get_audio, daemon=True).start()
+    # Start the Tkinter main loop
+    root.mainloop()
 
-# Start the Tkinter main loop
-root.mainloop()
+
+if __name__ == '__main__':
+    ip = "192.168.1.100"
+    main(ip)

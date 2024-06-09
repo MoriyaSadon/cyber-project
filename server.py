@@ -115,7 +115,7 @@ def priv_chat(my_client: Client, message):
             client.client_socket.send(encrypt_message(client, full_msg))
             check = True
     if not check:
-        my_client.client_socket.send(encrypt_message(my_client, f"{CHAT}** The username doesnt exist... **"))
+        my_client.client_socket.send(encrypt_message(my_client, f"{MSGBOX} The username doesnt exist..."))
 
 
 # --admin only--
@@ -188,6 +188,7 @@ def approve_censored_word(word, my_client: Client):
 # Function to handle incoming messages from a client
 def handle_client(current_client: Client):
     check = False
+    # connect to the chat
     while not check:
         enc_data = current_client.client_socket.recv(1024)
         data = decrypt_message(enc_data).split(" ")
@@ -200,6 +201,7 @@ def handle_client(current_client: Client):
             check = log_in(username, password)
     send_everyone(f"{current_client.name} joined the chat")
 
+    # receive and handle messages from clients
     while True:
         try:
             enc_message = current_client.client_socket.recv(1024)
@@ -252,6 +254,7 @@ def handle_client(current_client: Client):
                     priv_chat(current_client, message)  # dm name:msg
 
             else:
+                # check that the message is valid amd the user isn't mute before sending it
                 if not current_client.mute and approve_message_content(message):
                     broadcast(message, current_client)
                 else:
@@ -275,9 +278,11 @@ CHAT = "1"
 FUNCS = "2"
 MSGBOX = "3"
 
+# connect to the firebase
 users_firebase = Firebase("Users")
 censored_firebase = Firebase("Censored")
 
+# create ors object
 server_rsa_obj = RsaEnc("", "")
 server_rsa_obj.generate_key_pair()
 
